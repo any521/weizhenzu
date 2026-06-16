@@ -1,0 +1,151 @@
+package com.weizhenzu.application.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.weizhenzu.application.service.ReviewService;
+import com.weizhenzu.common.context.UserContext;
+import com.weizhenzu.common.exception.BizException;
+import com.weizhenzu.common.result.PageResult;
+import com.weizhenzu.common.result.ResultCode;
+import com.weizhenzu.domain.dto.ReviewCreateDTO;
+import com.weizhenzu.domain.entity.Order;
+import com.weizhenzu.domain.entity.Review;
+import com.weizhenzu.domain.entity.User;
+import com.weizhenzu.domain.vo.ReviewVO;
+import com.weizhenzu.infrastructure.persistence.mapper.OrderMapper;
+import com.weizhenzu.infrastructure.persistence.mapper.ReviewMapper;
+import com.weizhenzu.infrastructure.persistence.mapper.UserMapper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * 评价服务实现
+ *
+ * @author weizhenzu
+ * @since 1.0.0
+ */
+@Service
+@RequiredArgsConstructor
+public class ReviewServiceImpl implements ReviewService {
+
+    private final ReviewMapper reviewMapper;
+    private final OrderMapper orderMapper;
+    private final UserMapper userMapper;
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long create(ReviewCreateDTO dto) {
+        Long userId = UserContext.getUserId();
+        Order order = orderMapper.selectById(dto.getOrderId());
+        if (order == null || !userId.equals(order.getUserId())) {
+            throw new BizException(ResultCode.ORDER_NOT_FOUND);
+        }
+        if (Integer.valueOf(1).equals(order.getIsRated())) {
+            throw new BizException(ResultCode.PARAM_ERROR, "订单已评价");
+        }
+
+        Review r = new Review();
+        r.setOrderId(order.getId());
+        r.setOrderNo(order.getOrderNo());
+        r.setUserId(userId);
+        r.setMerchantId(order.getMerchantId());
+        r.setDeliveryManId(order.getDeliveryManId());
+        r.setRating(dto.getRating());
+        r.setTasteScore(dto.getTasteScore());
+        r.setPackingScore(dto.getPackingScore());
+        r.setDeliveryScore(dto.getDeliveryScore());
+        r.setContent(dto.getContent());
+        if (dto.getImages() != null && !dto.getImages().isEmpty()) {
+            r.setImages(String.join(",", dto.getImages()));
+        }
+        if (dto.getTags() != null && !dto.getTags().isEmpty()) {
+            r.setTags(String.join(",", dto.getTags()));
+        }
+        r.setAnonymous(dto.getAnonymous() == null ? 0 : dto.getAnonymous());
+        r.setStatus(1);
+        reviewMapper.insert(r);
+
+        // 标记订单已评价
+        order.setIsRated(1);
+        orderMapper.updateById(order);
+        return r.getId();
+    }
+
+    @Override
+    public ReviewVO detail(Long id) {
+        Review r = reviewMapper.selectById(id);
+        if (r == null) {
+            throw new BizException(ResultCode.NOT_FOUND, "评价不存在");
+        }
+        return toVO(r);
+    }
+
+    @Override
+    public PageResult<ReviewVO> merchantPage(Integer current, Integer size, Integer rating) {
+        Long merchantId = UserContext.getUserId();
+        Page<Review> page = new Page<>(current == null ? 1 : current, size == null ? 10 : size);
+        LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<Review>()
+                .eq(Review::getMerchantId, merchantId)
+                .eq(rating != null, Review::getRating, rating)
+                .orderByDesc(Review::getCreatedAt);
+        Page<Review> result = reviewMapper.selectPage(page, wrapper);
+        List<ReviewVO> records = result.getRecords().stream()
+                .map(this::toVO)
+                .collect(Collectors.toList());
+        return PageResult.of(records, result.getTotal(), result.getCurrent(), result.getSize());
+    }
+
+    @Override
+    public void reply(Long id, String content) {
+        Long merchantId = UserContext.getUserId();
+        Review r = reviewMapper.selectById(id);
+        if (r == null || !merchantId.equals(r.getMerchantId())) {
+            throw new BizException(ResultCode.NOT_FOUND, "评价不存在");
+        }
+        r.setMerchantReply(content);
+        r.setMerchantReplyTime(LocalDateTime.now());
+        reviewMapper.updateById(r);
+    }
+
+    private ReviewVO toVO(Review r) {
+        ReviewVO vo = new ReviewVO();
+        vo.setId(r.getId());
+        vo.setOrderId(r.getOrderId());
+        vo.setOrderNo(r.getOrderNo());
+        vo.setUserId(r.getUserId());
+        vo.setMerchantId(r.getMerchantId());
+        vo.setDeliveryManId(r.getDeliveryManId());
+        vo.setRating(r.getRating());
+        vo.setTasteScore(r.getTasteScore());
+        vo.setPackingScore(r.getPackingScore());
+        vo.setDeliveryScore(r.getDeliveryScore());
+        vo.setContent(r.getContent());
+        if (r.getImages() != null) {
+            vo.setImages(List.of(r.getImages().split(",")));
+        }
+        if (r.getTags() != null) {
+            vo.setTags(List.of(r.getTags().split(",")));
+        }
+        vo.setAnonymous(r.getAnonymous());
+        vo.setMerchantReply(r.getMerchantReply());
+        vo.setMerchantReplyTime(r.getMerchantReplyTime());
+        vo.setCreatedAt(r.getCreatedAt());
+
+        // 用户信息（匿名时隐藏）
+        if (r.getAnonymous() == null || r.getAnonymous() == 0) {
+            User u = userMapper.selectById(r.getUserId());
+            if (u != null) {
+                vo.setUserNickname(u.getNickname());
+                vo.setUserAvatar(u.getAvatar());
+            }
+        } else {
+            vo.setUserNickname("匿名用户");
+        }
+        return vo;
+    }
+}

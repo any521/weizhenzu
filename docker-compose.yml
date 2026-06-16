@@ -1,0 +1,119 @@
+# 味真足外卖订餐系统 - 基础设施编排
+# 启动: docker compose up -d
+# 停止: docker compose down
+# 清理数据: docker compose down -v
+
+services:
+  # ==================== MySQL 8.0 ====================
+  mysql:
+    image: mysql:8.0
+    container_name: weizhenzu-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root123456
+      MYSQL_DATABASE: weizhenzu
+      MYSQL_USER: weizhenzu
+      MYSQL_PASSWORD: weizhenzu123456
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+      - ./docker/mysql/conf/my.cnf:/etc/mysql/conf.d/my.cnf
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot123456"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - weizhenzu-net
+
+  # ==================== Redis 7 ====================
+  redis:
+    image: redis:7-alpine
+    container_name: weizhenzu-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - weizhenzu-net
+
+  # ==================== RabbitMQ 3.13 ====================
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: weizhenzu-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: weizhenzu
+      RABBITMQ_DEFAULT_PASS: weizhenzu123456
+      RABBITMQ_DEFAULT_VHOST: /weizhenzu
+    ports:
+      - "5672:5672"    # AMQP 端口
+      - "15672:15672"  # 管理控制台
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - ./docker/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    networks:
+      - weizhenzu-net
+
+  # ==================== 应用服务（可选，构建后启用） ====================
+  # app:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: weizhenzu-app
+  #   restart: unless-stopped
+  #   depends_on:
+  #     mysql:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #     rabbitmq:
+  #       condition: service_healthy
+  #   environment:
+  #     SPRING_PROFILES_ACTIVE: dev
+  #     SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/weizhenzu?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+  #     SPRING_DATASOURCE_USERNAME: weizhenzu
+  #     SPRING_DATASOURCE_PASSWORD: weizhenzu123456
+  #     SPRING_DATA_REDIS_HOST: redis
+  #     SPRING_DATA_REDIS_PORT: 6379
+  #     SPRING_RABBITMQ_HOST: rabbitmq
+  #     SPRING_RABBITMQ_PORT: 5672
+  #     SPRING_RABBITMQ_USERNAME: weizhenzu
+  #     SPRING_RABBITMQ_PASSWORD: weizhenzu123456
+  #     SPRING_RABBITMQ_VIRTUAL_HOST: /weizhenzu
+  #   ports:
+  #     - "8080:8080"
+  #   networks:
+  #     - weizhenzu-net
+
+# ==================== 数据卷 ====================
+volumes:
+  mysql-data:
+    driver: local
+  redis-data:
+    driver: local
+  rabbitmq-data:
+    driver: local
+
+# ==================== 网络 ====================
+networks:
+  weizhenzu-net:
+    driver: bridge
+    name: weizhenzu-net

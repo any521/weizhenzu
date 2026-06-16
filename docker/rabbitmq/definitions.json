@@ -1,0 +1,187 @@
+{
+  "_comment": "RabbitMQ 队列/交换机定义文件 - 启动时自动创建",
+  "rabbit_version": "3.13.0",
+  "users": [
+    {
+      "name": "weizhenzu",
+      "password": "weizhenzu123456",
+      "tags": ["administrator"]
+    }
+  ],
+  "vhosts": [
+    {
+      "name": "/weizhenzu"
+    }
+  ],
+  "permissions": [
+    {
+      "user": "weizhenzu",
+      "vhost": "/weizhenzu",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "order.exchange",
+      "vhost": "/weizhenzu",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "payment.exchange",
+      "vhost": "/weizhenzu",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "delivery.exchange",
+      "vhost": "/weizhenzu",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "notify.exchange",
+      "vhost": "/weizhenzu",
+      "type": "fanout",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "delay.exchange",
+      "vhost": "/weizhenzu",
+      "type": "x-delayed-message",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {
+        "x-delayed-type": "topic"
+      }
+    }
+  ],
+  "queues": [
+    {
+      "name": "order.create.queue",
+      "vhost": "/weizhenzu",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-message-ttl": 86400000,
+        "x-dead-letter-exchange": "order.exchange",
+        "x-dead-letter-routing-key": "order.dead"
+      }
+    },
+    {
+      "name": "order.cancel.queue",
+      "vhost": "/weizhenzu",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "order.timeout.queue",
+      "vhost": "/weizhenzu",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "payment.callback.queue",
+      "vhost": "/weizhenzu",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "delivery.assign.queue",
+      "vhost": "/weizhenzu",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "notify.sms.queue",
+      "vhost": "/weizhenzu",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "notify.push.queue",
+      "vhost": "/weizhenzu",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "order.exchange",
+      "vhost": "/weizhenzu",
+      "destination": "order.create.queue",
+      "destination_type": "queue",
+      "routing_key": "order.create",
+      "arguments": {}
+    },
+    {
+      "source": "order.exchange",
+      "vhost": "/weizhenzu",
+      "destination": "order.cancel.queue",
+      "destination_type": "queue",
+      "routing_key": "order.cancel",
+      "arguments": {}
+    },
+    {
+      "source": "delay.exchange",
+      "vhost": "/weizhenzu",
+      "destination": "order.timeout.queue",
+      "destination_type": "queue",
+      "routing_key": "order.timeout",
+      "arguments": {}
+    },
+    {
+      "source": "payment.exchange",
+      "vhost": "/weizhenzu",
+      "destination": "payment.callback.queue",
+      "destination_type": "queue",
+      "routing_key": "payment.callback",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.exchange",
+      "vhost": "/weizhenzu",
+      "destination": "delivery.assign.queue",
+      "destination_type": "queue",
+      "routing_key": "delivery.assign",
+      "arguments": {}
+    },
+    {
+      "source": "notify.exchange",
+      "vhost": "/weizhenzu",
+      "destination": "notify.sms.queue",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "notify.exchange",
+      "vhost": "/weizhenzu",
+      "destination": "notify.push.queue",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    }
+  ]
+}

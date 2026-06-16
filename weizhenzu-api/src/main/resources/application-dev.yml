@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/weizhenzu?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: weizhenzu
+    password: weizhenzu123456
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+  rabbitmq:
+    host: 127.0.0.1
+    port: 5672
+    username: weizhenzu
+    password: weizhenzu123456
+    virtual-host: /weizhenzu
+
+logging:
+  level:
+    com.weizhenzu: DEBUG

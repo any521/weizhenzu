@@ -1,0 +1,6 @@
+# 项目排除路径
+/weizhenzu-api/target/
+/weizhenzu-application/target/
+/weizhenzu-common/target/
+/weizhenzu-domain/target/
+/weizhenzu-infrastructure/target/

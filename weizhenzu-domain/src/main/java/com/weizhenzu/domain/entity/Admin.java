@@ -37,6 +37,8 @@ public class Admin implements Serializable {
 
     private String phone;
 
+    private String phoneHash;
+
     private String email;
 
     private Long roleId;

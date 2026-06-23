@@ -15,6 +15,11 @@ public interface AddressService {
 
     List<AddressVO> list();
 
+    /**
+     * 获取当前用户默认地址
+     */
+    AddressVO findDefault();
+
     AddressVO detail(Long id);
 
     Long add(AddressDTO dto);

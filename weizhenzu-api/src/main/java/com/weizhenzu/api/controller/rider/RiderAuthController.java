@@ -4,6 +4,8 @@ import com.weizhenzu.application.service.AuthService;
 import com.weizhenzu.common.result.Result;
 import com.weizhenzu.domain.dto.PasswordLoginDTO;
 import com.weizhenzu.domain.dto.RefreshTokenDTO;
+import com.weizhenzu.domain.dto.RiderRegisterDTO;
+import com.weizhenzu.domain.dto.SmsCodeDTO;
 import com.weizhenzu.domain.dto.SmsLoginDTO;
 import com.weizhenzu.domain.vo.LoginVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,6 +27,19 @@ import org.springframework.web.bind.annotation.*;
 public class RiderAuthController {
 
     private final AuthService authService;
+
+    @Operation(summary = "发送短信验证码")
+    @PostMapping("/sms-code")
+    public Result<Void> sendSmsCode(@Valid @RequestBody SmsCodeDTO dto) {
+        authService.sendSmsCode(dto);
+        return Result.ok();
+    }
+
+    @Operation(summary = "骑手注册")
+    @PostMapping("/register")
+    public Result<Long> register(@Valid @RequestBody RiderRegisterDTO dto) {
+        return Result.ok(authService.registerRider(dto));
+    }
 
     @Operation(summary = "短信验证码登录")
     @PostMapping("/login/sms")

@@ -10,7 +10,6 @@ import lombok.Getter;
  * @since 1.0.0
  */
 @Getter
-@AllArgsConstructor
 public enum PermissionType {
 
     MENU(1, "菜单"),
@@ -19,6 +18,11 @@ public enum PermissionType {
 
     private final Integer code;
     private final String desc;
+
+    PermissionType(Integer code, String desc) {
+        this.code = code;
+        this.desc = desc;
+    }
 
     public static PermissionType of(Integer code) {
         if (code == null) {

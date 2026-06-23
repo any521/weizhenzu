@@ -41,6 +41,25 @@ public class AddressServiceImpl implements AddressService {
     }
 
     @Override
+    public AddressVO findDefault() {
+        Long userId = UserContext.getUserId();
+        Address addr = addressMapper.selectOne(
+                new LambdaQueryWrapper<Address>()
+                        .eq(Address::getUserId, userId)
+                        .eq(Address::getIsDefault, 1)
+                        .last("LIMIT 1"));
+        if (addr == null) {
+            // 没有默认地址时返回最近一条
+            addr = addressMapper.selectOne(
+                    new LambdaQueryWrapper<Address>()
+                            .eq(Address::getUserId, userId)
+                            .orderByDesc(Address::getCreatedAt)
+                            .last("LIMIT 1"));
+        }
+        return addr == null ? null : toVO(addr);
+    }
+
+    @Override
     public AddressVO detail(Long id) {
         Address addr = getAndCheckOwner(id);
         return toVO(addr);

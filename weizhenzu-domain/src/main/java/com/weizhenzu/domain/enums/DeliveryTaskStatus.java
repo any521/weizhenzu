@@ -10,7 +10,6 @@ import lombok.Getter;
  * @since 1.0.0
  */
 @Getter
-@AllArgsConstructor
 public enum DeliveryTaskStatus {
 
     PENDING_GRAB(0, "待抢"),
@@ -23,6 +22,11 @@ public enum DeliveryTaskStatus {
 
     private final Integer code;
     private final String desc;
+
+    DeliveryTaskStatus(Integer code, String desc) {
+        this.code = code;
+        this.desc = desc;
+    }
 
     public static DeliveryTaskStatus of(Integer code) {
         for (DeliveryTaskStatus s : values()) {

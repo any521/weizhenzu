@@ -2,8 +2,10 @@ package com.weizhenzu.application.service;
 
 import com.weizhenzu.domain.dto.PasswordLoginDTO;
 import com.weizhenzu.domain.dto.RefreshTokenDTO;
+import com.weizhenzu.domain.dto.RiderRegisterDTO;
 import com.weizhenzu.domain.dto.SmsCodeDTO;
 import com.weizhenzu.domain.dto.SmsLoginDTO;
+import com.weizhenzu.domain.dto.UserRegisterDTO;
 import com.weizhenzu.domain.vo.LoginVO;
 
 /**
@@ -38,4 +40,14 @@ public interface AuthService {
      * 退出登录
      */
     void logout();
+
+    /**
+     * C端用户注册（短信验证码）
+     */
+    Long registerUser(UserRegisterDTO dto);
+
+    /**
+     * 骑手注册（短信验证码，注册后需管理员审核）
+     */
+    Long registerRider(RiderRegisterDTO dto);
 }

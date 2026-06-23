@@ -27,6 +27,9 @@ public class UserVO implements Serializable {
     @Schema(description = "手机号（脱敏）")
     private String phone;
 
+    @Schema(description = "用户名")
+    private String username;
+
     @Schema(description = "昵称")
     private String nickname;
 
@@ -47,6 +50,9 @@ public class UserVO implements Serializable {
 
     @Schema(description = "余额")
     private BigDecimal balance;
+
+    @Schema(description = "状态：0禁用 1启用")
+    private Integer status;
 
     @Schema(description = "创建时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

@@ -10,7 +10,6 @@ import lombok.Getter;
  * @since 1.0.0
  */
 @Getter
-@AllArgsConstructor
 public enum OrderSource {
 
     APP(1, "APP"),
@@ -19,6 +18,11 @@ public enum OrderSource {
 
     private final Integer code;
     private final String desc;
+
+    OrderSource(Integer code, String desc) {
+        this.code = code;
+        this.desc = desc;
+    }
 
     public static OrderSource of(Integer code) {
         if (code == null) {

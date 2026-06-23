@@ -40,4 +40,12 @@ public class MerchantReviewController {
         reviewService.reply(id, body.get("content"));
         return Result.ok();
     }
+
+    @Operation(summary = "更新评价状态（隐藏/公开）")
+    @PutMapping("/{id}/status")
+    public Result<Void> updateStatus(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        Integer status = body.get("status") == null ? null : Integer.valueOf(body.get("status").toString());
+        reviewService.updateStatus(id, status);
+        return Result.ok();
+    }
 }

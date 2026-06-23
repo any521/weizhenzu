@@ -10,7 +10,6 @@ import lombok.Getter;
  * @since 1.0.0
  */
 @Getter
-@AllArgsConstructor
 public enum CouponType {
 
     FULL_REDUCTION(1, "满减"),
@@ -19,6 +18,11 @@ public enum CouponType {
 
     private final Integer code;
     private final String desc;
+
+    CouponType(Integer code, String desc) {
+        this.code = code;
+        this.desc = desc;
+    }
 
     public static CouponType of(Integer code) {
         if (code == null) {

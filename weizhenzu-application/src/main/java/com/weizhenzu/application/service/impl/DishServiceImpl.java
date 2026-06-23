@@ -2,6 +2,8 @@ package com.weizhenzu.application.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.weizhenzu.application.service.DishService;
 import com.weizhenzu.common.context.UserContext;
 import com.weizhenzu.common.exception.BizException;
@@ -9,18 +11,22 @@ import com.weizhenzu.common.result.PageResult;
 import com.weizhenzu.common.result.ResultCode;
 import com.weizhenzu.domain.dto.DishDTO;
 import com.weizhenzu.domain.entity.Dish;
+import com.weizhenzu.domain.entity.DishCategory;
 import com.weizhenzu.domain.entity.DishSpec;
 import com.weizhenzu.domain.vo.DishSpecVO;
 import com.weizhenzu.domain.vo.DishVO;
+import com.weizhenzu.infrastructure.persistence.mapper.DishCategoryMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.DishMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.DishSpecMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -29,12 +35,15 @@ import java.util.stream.Collectors;
  * @author weizhenzu
  * @since 1.0.0
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DishServiceImpl implements DishService {
 
     private final DishMapper dishMapper;
     private final DishSpecMapper dishSpecMapper;
+    private final DishCategoryMapper dishCategoryMapper;
+    private final ObjectMapper objectMapper;
 
     @Override
     public DishVO detail(Long id) {
@@ -42,6 +51,12 @@ public class DishServiceImpl implements DishService {
         if (dish == null) {
             throw new BizException(ResultCode.DISH_NOT_FOUND);
         }
+        return toVO(dish, true);
+    }
+
+    @Override
+    public DishVO merchantDetail(Long id) {
+        Dish dish = getAndCheckOwner(id);
         return toVO(dish, true);
     }
 
@@ -112,10 +127,28 @@ public class DishServiceImpl implements DishService {
                 .orderByAsc(Dish::getSort)
                 .orderByDesc(Dish::getCreatedAt);
         Page<Dish> result = dishMapper.selectPage(page, wrapper);
+        Map<Long, String> categoryNameMap = buildCategoryNameMap(result.getRecords());
         List<DishVO> records = result.getRecords().stream()
-                .map(d -> toVO(d, false))
+                .map(d -> {
+                    DishVO vo = toVO(d, false);
+                    vo.setCategoryName(categoryNameMap.getOrDefault(d.getCategoryId(), ""));
+                    return vo;
+                })
                 .collect(Collectors.toList());
         return PageResult.of(records, result.getTotal(), result.getCurrent(), result.getSize());
+    }
+
+    private Map<Long, String> buildCategoryNameMap(List<Dish> dishes) {
+        List<Long> categoryIds = dishes.stream()
+                .map(Dish::getCategoryId)
+                .distinct()
+                .filter(id -> id != null)
+                .collect(Collectors.toList());
+        if (categoryIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return dishCategoryMapper.selectBatchIds(categoryIds).stream()
+                .collect(Collectors.toMap(DishCategory::getId, DishCategory::getName, (a, b) -> a));
     }
 
     private Dish getAndCheckOwner(Long id) {
@@ -144,7 +177,10 @@ public class DishServiceImpl implements DishService {
         vo.setSpicy(dish.getSpicy());
         vo.setStatus(dish.getStatus());
         vo.setSort(dish.getSort());
-        // tags/images 简化为 null（实际可解析 JSON）
+        vo.setCreateTime(dish.getCreatedAt());
+        // 解析 tags/images JSON
+        vo.setTags(parseJsonList(dish.getTags()));
+        vo.setImages(parseJsonList(dish.getImages()));
         if (withSpecs) {
             List<DishSpec> specs = dishSpecMapper.selectList(
                     new LambdaQueryWrapper<DishSpec>()
@@ -168,5 +204,24 @@ public class DishServiceImpl implements DishService {
             }
         }
         return vo;
+    }
+
+    /**
+     * 解析 JSON 字符串为 List
+     */
+    private List<String> parseJsonList(String json) {
+        if (json == null || json.isEmpty()) {
+            return Collections.emptyList();
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<String>>() {});
+        } catch (Exception e) {
+            log.warn("[Dish] 解析 JSON 失败: json={}, error={}", json, e.getMessage());
+            // 兼容旧的逗号分隔格式
+            if (json.contains(",")) {
+                return List.of(json.split(","));
+            }
+            return List.of(json);
+        }
     }
 }

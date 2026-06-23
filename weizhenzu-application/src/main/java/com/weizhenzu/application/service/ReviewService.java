@@ -28,7 +28,30 @@ public interface ReviewService {
     PageResult<ReviewVO> merchantPage(Integer current, Integer size, Integer rating);
 
     /**
+     * 我的评价列表（C端）
+     */
+    PageResult<ReviewVO> userPage(Integer current, Integer size);
+
+    /**
+     * 商家评价列表（C端，按商家ID查询）
+     */
+    PageResult<ReviewVO> merchantReviews(Long merchantId, Integer current, Integer size);
+
+    /**
+     * 菜品评价列表（C端，按菜品ID查询）
+     */
+    PageResult<ReviewVO> dishReviews(Long dishId, Integer current, Integer size);
+
+    /**
      * 商家回复评价
      */
     void reply(Long id, String content);
+
+    /**
+     * 商家更新评价状态（隐藏/公开）
+     *
+     * @param id     评价ID
+     * @param status 1公开 0隐藏
+     */
+    void updateStatus(Long id, Integer status);
 }

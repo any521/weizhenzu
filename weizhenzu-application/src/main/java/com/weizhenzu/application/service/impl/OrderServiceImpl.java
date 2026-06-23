@@ -365,6 +365,7 @@ public class OrderServiceImpl implements OrderService {
         }
         deliveryTaskMapper.updateStatus(taskId, 2);
         task.setArriveTime(LocalDateTime.now());
+        deliveryTaskMapper.updateById(task);
     }
 
     @Override
@@ -533,6 +534,7 @@ public class OrderServiceImpl implements OrderService {
         vo.setCancelTime(order.getCancelTime());
         vo.setCancelReason(order.getCancelReason());
         vo.setExpectedTime(order.getExpectedTime());
+        vo.setDeliveryTaskId(order.getDeliveryTaskId());
         vo.setIsRated(order.getIsRated());
         vo.setCreatedAt(order.getCreatedAt());
 

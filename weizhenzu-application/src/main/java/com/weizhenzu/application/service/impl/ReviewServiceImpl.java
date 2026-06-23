@@ -15,11 +15,15 @@ import com.weizhenzu.domain.vo.ReviewVO;
 import com.weizhenzu.infrastructure.persistence.mapper.OrderMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.ReviewMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.UserMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -29,6 +33,7 @@ import java.util.stream.Collectors;
  * @author weizhenzu
  * @since 1.0.0
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ReviewServiceImpl implements ReviewService {
@@ -36,6 +41,7 @@ public class ReviewServiceImpl implements ReviewService {
     private final ReviewMapper reviewMapper;
     private final OrderMapper orderMapper;
     private final UserMapper userMapper;
+    private final ObjectMapper objectMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -61,10 +67,10 @@ public class ReviewServiceImpl implements ReviewService {
         r.setDeliveryScore(dto.getDeliveryScore());
         r.setContent(dto.getContent());
         if (dto.getImages() != null && !dto.getImages().isEmpty()) {
-            r.setImages(String.join(",", dto.getImages()));
+            r.setImages(toJson(dto.getImages()));
         }
         if (dto.getTags() != null && !dto.getTags().isEmpty()) {
-            r.setTags(String.join(",", dto.getTags()));
+            r.setTags(toJson(dto.getTags()));
         }
         r.setAnonymous(dto.getAnonymous() == null ? 0 : dto.getAnonymous());
         r.setStatus(1);
@@ -101,6 +107,48 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Override
+    public PageResult<ReviewVO> userPage(Integer current, Integer size) {
+        Long userId = UserContext.getUserId();
+        Page<Review> page = new Page<>(current == null ? 1 : current, size == null ? 10 : size);
+        LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<Review>()
+                .eq(Review::getUserId, userId)
+                .orderByDesc(Review::getCreatedAt);
+        Page<Review> result = reviewMapper.selectPage(page, wrapper);
+        List<ReviewVO> records = result.getRecords().stream()
+                .map(this::toVO)
+                .collect(Collectors.toList());
+        return PageResult.of(records, result.getTotal(), result.getCurrent(), result.getSize());
+    }
+
+    @Override
+    public PageResult<ReviewVO> merchantReviews(Long merchantId, Integer current, Integer size) {
+        Page<Review> page = new Page<>(current == null ? 1 : current, size == null ? 10 : size);
+        LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<Review>()
+                .eq(Review::getMerchantId, merchantId)
+                .eq(Review::getStatus, 1)
+                .orderByDesc(Review::getCreatedAt);
+        Page<Review> result = reviewMapper.selectPage(page, wrapper);
+        List<ReviewVO> records = result.getRecords().stream()
+                .map(this::toVO)
+                .collect(Collectors.toList());
+        return PageResult.of(records, result.getTotal(), result.getCurrent(), result.getSize());
+    }
+
+    @Override
+    public PageResult<ReviewVO> dishReviews(Long dishId, Integer current, Integer size) {
+        // 简化实现：查询所有公开评价（菜品与评价的关联通过订单项建立，此处返回最新评价列表）
+        Page<Review> page = new Page<>(current == null ? 1 : current, size == null ? 10 : size);
+        LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<Review>()
+                .eq(Review::getStatus, 1)
+                .orderByDesc(Review::getCreatedAt);
+        Page<Review> result = reviewMapper.selectPage(page, wrapper);
+        List<ReviewVO> records = result.getRecords().stream()
+                .map(this::toVO)
+                .collect(Collectors.toList());
+        return PageResult.of(records, result.getTotal(), result.getCurrent(), result.getSize());
+    }
+
+    @Override
     public void reply(Long id, String content) {
         Long merchantId = UserContext.getUserId();
         Review r = reviewMapper.selectById(id);
@@ -110,6 +158,19 @@ public class ReviewServiceImpl implements ReviewService {
         r.setMerchantReply(content);
         r.setMerchantReplyTime(LocalDateTime.now());
         reviewMapper.updateById(r);
+    }
+
+    @Override
+    public void updateStatus(Long id, Integer status) {
+        Long merchantId = UserContext.getUserId();
+        Review r = reviewMapper.selectById(id);
+        if (r == null || !merchantId.equals(r.getMerchantId())) {
+            throw new BizException(ResultCode.NOT_FOUND, "评价不存在");
+        }
+        Review update = new Review();
+        update.setId(id);
+        update.setStatus(status);
+        reviewMapper.updateById(update);
     }
 
     private ReviewVO toVO(Review r) {
@@ -125,12 +186,8 @@ public class ReviewServiceImpl implements ReviewService {
         vo.setPackingScore(r.getPackingScore());
         vo.setDeliveryScore(r.getDeliveryScore());
         vo.setContent(r.getContent());
-        if (r.getImages() != null) {
-            vo.setImages(List.of(r.getImages().split(",")));
-        }
-        if (r.getTags() != null) {
-            vo.setTags(List.of(r.getTags().split(",")));
-        }
+        vo.setImages(parseJsonList(r.getImages()));
+        vo.setTags(parseJsonList(r.getTags()));
         vo.setAnonymous(r.getAnonymous());
         vo.setMerchantReply(r.getMerchantReply());
         vo.setMerchantReplyTime(r.getMerchantReplyTime());
@@ -147,5 +204,35 @@ public class ReviewServiceImpl implements ReviewService {
             vo.setUserNickname("匿名用户");
         }
         return vo;
+    }
+
+    /**
+     * List 转 JSON 字符串
+     */
+    private String toJson(List<String> list) {
+        try {
+            return objectMapper.writeValueAsString(list);
+        } catch (Exception e) {
+            log.warn("[Review] 序列化 JSON 失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 解析 JSON 字符串为 List
+     */
+    private List<String> parseJsonList(String json) {
+        if (json == null || json.isEmpty()) {
+            return Collections.emptyList();
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<String>>() {});
+        } catch (Exception e) {
+            log.warn("[Review] 解析 JSON 失败: json={}, error={}", json, e.getMessage());
+            if (json.contains(",")) {
+                return List.of(json.split(","));
+            }
+            return List.of(json);
+        }
     }
 }

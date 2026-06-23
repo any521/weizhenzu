@@ -32,6 +32,12 @@ public class UserAddressController {
         return Result.ok(addressService.list());
     }
 
+    @Operation(summary = "默认地址")
+    @GetMapping("/default")
+    public Result<AddressVO> defaultAddress() {
+        return Result.ok(addressService.findDefault());
+    }
+
     @Operation(summary = "地址详情")
     @GetMapping("/{id}")
     public Result<AddressVO> detail(@PathVariable Long id) {

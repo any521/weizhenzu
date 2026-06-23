@@ -10,7 +10,6 @@ import lombok.Getter;
  * @since 1.0.0
  */
 @Getter
-@AllArgsConstructor
 public enum CouponScope {
 
     ALL(1, "全场"),
@@ -19,6 +18,11 @@ public enum CouponScope {
 
     private final Integer code;
     private final String desc;
+
+    CouponScope(Integer code, String desc) {
+        this.code = code;
+        this.desc = desc;
+    }
 
     public static CouponScope of(Integer code) {
         if (code == null) {

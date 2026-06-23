@@ -10,7 +10,6 @@ import lombok.Getter;
  * @since 1.0.0
  */
 @Getter
-@AllArgsConstructor
 public enum PaymentStatus {
 
     PENDING(0, "待支付"),
@@ -21,6 +20,11 @@ public enum PaymentStatus {
 
     private final Integer code;
     private final String desc;
+
+    PaymentStatus(Integer code, String desc) {
+        this.code = code;
+        this.desc = desc;
+    }
 
     public static PaymentStatus of(Integer code) {
         if (code == null) {

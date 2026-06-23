@@ -73,6 +73,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/api/user/auth/**",
+                    "/api/user/merchants/**",
+                    "/api/user/recommend/**",
+                    "/api/user/coupons/available",
                     "/api/merchant/auth/**",
                     "/api/rider/auth/**",
                     "/api/admin/auth/**",

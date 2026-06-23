@@ -1,7 +1,8 @@
 package com.weizhenzu.infrastructure.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
@@ -39,7 +40,10 @@ public class JacksonConfig {
                     new LocalDateSerializer(DateTimeFormatter.ofPattern(DATE_PATTERN)));
             javaTimeModule.addDeserializer(LocalDate.class,
                     new LocalDateDeserializer(DateTimeFormatter.ofPattern(DATE_PATTERN)));
-            builder.modules(javaTimeModule);
+            SimpleModule longModule = new SimpleModule();
+            longModule.addSerializer(Long.class, ToStringSerializer.instance);
+            longModule.addSerializer(Long.TYPE, ToStringSerializer.instance);
+            builder.modules(javaTimeModule, longModule);
             builder.featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         };
     }

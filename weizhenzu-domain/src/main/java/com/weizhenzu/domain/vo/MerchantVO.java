@@ -80,11 +80,33 @@ public class MerchantVO implements Serializable {
     @Schema(description = "状态：0待审核 1正常 2禁用 3驳回")
     private Integer status;
 
+    @Schema(description = "运营状态：0禁用 1启用")
+    private Integer operateStatus;
+
+    @Schema(description = "审核状态：0待审核 1已通过 2已驳回")
+    private Integer auditStatus;
+
+    @Schema(description = "联系人")
+    private String contactPerson;
+
+    @Schema(description = "联系电话")
+    private String phone;
+
+    @Schema(description = "资质信息")
+    private String qualification;
+
     @Schema(description = "评分")
     private BigDecimal rating;
 
     @Schema(description = "月售")
     private Integer monthSales;
+
+    @Schema(description = "月售（前端字段，与 monthSales 等价）")
+    private Integer monthlySales;
+
+    @Schema(description = "入驻时间")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime createTime;
 
     @Schema(description = "距离(米)")
     private Integer distance;

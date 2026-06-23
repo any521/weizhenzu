@@ -38,4 +38,11 @@ public class PhoneUtils {
         if (phone == null || phone.length() < 7) return phone;
         return phone.substring(0, 3) + "****" + phone.substring(phone.length() - 4);
     }
+
+    /**
+     * 校验是否为合法手机号
+     */
+    public static boolean isPhone(String str) {
+        return str != null && str.matches("^1[3-9]\\d{9}$");
+    }
 }

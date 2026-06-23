@@ -10,7 +10,6 @@ import lombok.Getter;
  * @since 1.0.0
  */
 @Getter
-@AllArgsConstructor
 public enum RefundStatus {
 
     APPLYING(0, "申请中"),
@@ -23,6 +22,11 @@ public enum RefundStatus {
 
     private final Integer code;
     private final String desc;
+
+    RefundStatus(Integer code, String desc) {
+        this.code = code;
+        this.desc = desc;
+    }
 
     public static RefundStatus of(Integer code) {
         for (RefundStatus s : values()) {

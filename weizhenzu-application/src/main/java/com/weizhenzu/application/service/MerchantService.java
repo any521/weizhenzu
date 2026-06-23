@@ -6,6 +6,7 @@ import com.weizhenzu.domain.vo.DishCategoryVO;
 import com.weizhenzu.domain.vo.MerchantCategoryVO;
 import com.weizhenzu.domain.vo.MerchantVO;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -45,4 +46,32 @@ public interface MerchantService {
      * 商家分类列表（C端）
      */
     List<MerchantCategoryVO> categories();
+
+    /**
+     * 更新商家设置
+     *
+     * @param name            店铺名称
+     * @param logo            店铺Logo
+     * @param description     简介
+     * @param notice          公告
+     * @param openTime        营业时间
+     * @param isOpen          是否营业
+     * @param minOrderAmount  起送价
+     * @param deliveryFee     配送费
+     * @param packingFee      打包费
+     * @param deliveryRadius  配送半径
+     */
+    void updateSettings(String name, String logo, String description, String notice,
+                        String openTime, Integer isOpen, BigDecimal minOrderAmount,
+                        BigDecimal deliveryFee, BigDecimal packingFee, Integer deliveryRadius);
+
+    /**
+     * 商家财务统计
+     */
+    java.util.Map<String, Object> financeStats();
+
+    /**
+     * 商家财务图表数据
+     */
+    java.util.Map<String, Object> financeChart();
 }

@@ -22,4 +22,18 @@ public interface CouponMapper extends BaseMapper<Coupon> {
             "WHERE id = #{couponId} AND deleted = 0 AND status = 1 " +
             "AND received_count < total_count")
     int increaseReceived(@Param("couponId") Long couponId);
+
+    /**
+     * 原子增加领取数（带库存校验）
+     */
+    @Update("UPDATE t_coupon SET received_count = received_count + 1, updated_at = NOW() " +
+            "WHERE id = #{couponId} AND received_count < total_count AND deleted = 0")
+    int incrementReceived(@Param("couponId") Long couponId);
+
+    /**
+     * 原子增加使用数
+     */
+    @Update("UPDATE t_coupon SET used_count = used_count + 1, updated_at = NOW() " +
+            "WHERE id = #{couponId}")
+    int incrementUsed(@Param("couponId") Long couponId);
 }

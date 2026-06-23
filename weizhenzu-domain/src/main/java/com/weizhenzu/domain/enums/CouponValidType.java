@@ -10,7 +10,6 @@ import lombok.Getter;
  * @since 1.0.0
  */
 @Getter
-@AllArgsConstructor
 public enum CouponValidType {
 
     FIXED_TIME(1, "固定时间"),
@@ -18,6 +17,11 @@ public enum CouponValidType {
 
     private final Integer code;
     private final String desc;
+
+    CouponValidType(Integer code, String desc) {
+        this.code = code;
+        this.desc = desc;
+    }
 
     public static CouponValidType of(Integer code) {
         if (code == null) {

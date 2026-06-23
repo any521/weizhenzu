@@ -20,4 +20,10 @@ public interface AdminMapper extends BaseMapper<Admin> {
      */
     @Select("SELECT * FROM t_admin WHERE username = #{username} AND deleted = 0 LIMIT 1")
     Admin selectByUsername(@Param("username") String username);
+
+    /**
+     * 根据手机号哈希查询管理员
+     */
+    @Select("SELECT * FROM t_admin WHERE phone_hash = #{phoneHash} AND deleted = 0 LIMIT 1")
+    Admin selectByPhoneHash(@Param("phoneHash") String phoneHash);
 }

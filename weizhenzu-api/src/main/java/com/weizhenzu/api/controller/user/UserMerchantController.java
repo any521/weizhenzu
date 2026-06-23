@@ -1,11 +1,13 @@
 package com.weizhenzu.api.controller.user;
 
 import com.weizhenzu.application.service.MerchantService;
+import com.weizhenzu.application.service.ReviewService;
 import com.weizhenzu.common.result.PageResult;
 import com.weizhenzu.common.result.Result;
 import com.weizhenzu.domain.vo.DishCategoryVO;
 import com.weizhenzu.domain.vo.MerchantCategoryVO;
 import com.weizhenzu.domain.vo.MerchantVO;
+import com.weizhenzu.domain.vo.ReviewVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ import java.util.List;
 public class UserMerchantController {
 
     private final MerchantService merchantService;
+    private final ReviewService reviewService;
 
     @Operation(summary = "商家列表")
     @GetMapping
@@ -53,5 +56,14 @@ public class UserMerchantController {
     @GetMapping("/{id}/menu")
     public Result<List<DishCategoryVO>> menu(@PathVariable Long id) {
         return Result.ok(merchantService.menu(id));
+    }
+
+    @Operation(summary = "商家评价列表")
+    @GetMapping("/{id}/reviews")
+    public Result<PageResult<ReviewVO>> reviews(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "1") Integer current,
+            @RequestParam(defaultValue = "10") Integer size) {
+        return Result.ok(reviewService.merchantReviews(id, current, size));
     }
 }

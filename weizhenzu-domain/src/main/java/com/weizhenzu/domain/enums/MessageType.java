@@ -10,7 +10,6 @@ import lombok.Getter;
  * @since 1.0.0
  */
 @Getter
-@AllArgsConstructor
 public enum MessageType {
 
     ORDER(1, "订单"),
@@ -20,6 +19,11 @@ public enum MessageType {
 
     private final Integer code;
     private final String desc;
+
+    MessageType(Integer code, String desc) {
+        this.code = code;
+        this.desc = desc;
+    }
 
     public static MessageType of(Integer code) {
         if (code == null) {

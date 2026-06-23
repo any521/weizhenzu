@@ -23,6 +23,12 @@ public class CouponVO implements Serializable {
     @Schema(description = "优惠券ID")
     private Long id;
 
+    @Schema(description = "归属商家ID：0表示系统券")
+    private Long merchantId;
+
+    @Schema(description = "归属商家名称")
+    private String merchantName;
+
     @Schema(description = "优惠券名称")
     private String name;
 

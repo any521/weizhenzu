@@ -10,7 +10,6 @@ import lombok.Getter;
  * @since 1.0.0
  */
 @Getter
-@AllArgsConstructor
 public enum CommonStatus {
 
     DISABLED(0, "禁用"),
@@ -18,6 +17,11 @@ public enum CommonStatus {
 
     private final Integer code;
     private final String desc;
+
+    CommonStatus(Integer code, String desc) {
+        this.code = code;
+        this.desc = desc;
+    }
 
     public static CommonStatus of(Integer code) {
         if (code == null) {

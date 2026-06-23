@@ -18,6 +18,11 @@ public interface DishService {
     DishVO detail(Long id);
 
     /**
+     * 商家菜品详情
+     */
+    DishVO merchantDetail(Long id);
+
+    /**
      * 商家新增菜品
      */
     Long add(DishDTO dto);

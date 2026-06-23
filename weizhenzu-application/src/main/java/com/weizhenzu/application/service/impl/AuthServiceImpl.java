@@ -10,8 +10,10 @@ import com.weizhenzu.common.result.ResultCode;
 import com.weizhenzu.common.utils.PhoneUtils;
 import com.weizhenzu.domain.dto.PasswordLoginDTO;
 import com.weizhenzu.domain.dto.RefreshTokenDTO;
+import com.weizhenzu.domain.dto.RiderRegisterDTO;
 import com.weizhenzu.domain.dto.SmsCodeDTO;
 import com.weizhenzu.domain.dto.SmsLoginDTO;
+import com.weizhenzu.domain.dto.UserRegisterDTO;
 import com.weizhenzu.domain.entity.Admin;
 import com.weizhenzu.domain.entity.DeliveryMan;
 import com.weizhenzu.domain.entity.Merchant;
@@ -108,6 +110,14 @@ public class AuthServiceImpl implements AuthService {
                 nickname = r.getName();
                 avatar = r.getAvatar();
             }
+            case ADMIN -> {
+                Admin admin = adminMapper.selectByPhoneHash(phoneHash);
+                if (admin == null) throw new BizException(ResultCode.USER_NOT_FOUND, "手机号未绑定管理员");
+                if (admin.getStatus() != 1) throw new BizException(ResultCode.USER_DISABLED);
+                userId = admin.getId();
+                nickname = admin.getRealName();
+                avatar = admin.getAvatar();
+            }
             default -> throw new BizException(ResultCode.PARAM_ERROR, "该端不支持短信登录");
         }
 
@@ -127,6 +137,10 @@ public class AuthServiceImpl implements AuthService {
         switch (type) {
             case USER -> {
                 User user = userMapper.selectByPhoneHash(phoneHash);
+                // 未命中手机号且输入的是用户名，则按用户名查询
+                if (user == null && !PhoneUtils.isPhone(dto.getPhone())) {
+                    user = userMapper.selectByUsername(dto.getPhone());
+                }
                 if (user == null || user.getPassword() == null
                         || !passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
                     throw new BizException(ResultCode.USER_NOT_FOUND, "账号或密码错误");
@@ -157,7 +171,11 @@ public class AuthServiceImpl implements AuthService {
                 avatar = r.getAvatar();
             }
             case ADMIN -> {
+                // 管理员支持用户名+密码 或 手机号+密码
                 Admin admin = adminMapper.selectByUsername(dto.getPhone());
+                if (admin == null && PhoneUtils.isPhone(dto.getPhone())) {
+                    admin = adminMapper.selectByPhoneHash(PhoneUtils.hash(dto.getPhone()));
+                }
                 if (admin == null || !passwordEncoder.matches(dto.getPassword(), admin.getPassword())) {
                     throw new BizException(ResultCode.USER_NOT_FOUND, "账号或密码错误");
                 }
@@ -189,6 +207,68 @@ public class AuthServiceImpl implements AuthService {
         if (userId != null) {
             redis.delete(CommonConstants.TOKEN_KEY + userId);
         }
+    }
+
+    @Override
+    public Long registerUser(UserRegisterDTO dto) {
+        // 1. 校验短信验证码
+        if (!smsService.verifyCode(dto.getPhone(), dto.getCode(), "REGISTER")) {
+            throw new BizException(ResultCode.SMS_CODE_ERROR);
+        }
+        // 2. 校验手机号是否已注册
+        String phoneHash = PhoneUtils.hash(dto.getPhone());
+        if (userMapper.selectByPhoneHash(phoneHash) != null) {
+            throw new BizException(ResultCode.PARAM_ERROR, "该手机号已注册");
+        }
+        // 3. 校验用户名唯一性
+        if (dto.getUsername() != null && !dto.getUsername().isBlank()) {
+            if (userMapper.selectByUsername(dto.getUsername()) != null) {
+                throw new BizException(ResultCode.PARAM_ERROR, "该用户名已被占用");
+            }
+        }
+        // 4. 创建用户
+        User user = new User();
+        user.setUsername(dto.getUsername());
+        user.setPhone(PhoneUtils.encrypt(dto.getPhone()));
+        user.setPhoneHash(phoneHash);
+        user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        user.setNickname(dto.getNickname() != null && !dto.getNickname().isBlank()
+                ? dto.getNickname() : "用户" + dto.getPhone().substring(7));
+        user.setStatus(1);
+        user.setLevel(1);
+        user.setPoints(0);
+        user.setBalance(java.math.BigDecimal.ZERO);
+        userMapper.insert(user);
+        return user.getId();
+    }
+
+    @Override
+    public Long registerRider(RiderRegisterDTO dto) {
+        // 1. 校验短信验证码
+        if (!smsService.verifyCode(dto.getPhone(), dto.getCode(), "REGISTER")) {
+            throw new BizException(ResultCode.SMS_CODE_ERROR);
+        }
+        // 2. 校验手机号是否已注册
+        String phoneHash = PhoneUtils.hash(dto.getPhone());
+        if (deliveryManMapper.selectByPhoneHash(phoneHash) != null) {
+            throw new BizException(ResultCode.PARAM_ERROR, "该手机号已注册");
+        }
+        // 3. 创建骑手（status=0 待审核）
+        DeliveryMan rider = new DeliveryMan();
+        rider.setPhone(PhoneUtils.encrypt(dto.getPhone()));
+        rider.setPhoneHash(phoneHash);
+        rider.setPassword(passwordEncoder.encode(dto.getPassword()));
+        rider.setName(dto.getRealName());
+        rider.setRealName(dto.getRealName());
+        rider.setIdCard(dto.getIdCard());
+        rider.setStatus(0); // 0=待审核，需管理员审核通过后才能登录
+        rider.setOnDuty(0);
+        rider.setTotalOrders(0);
+        rider.setMonthOrders(0);
+        rider.setRating(new java.math.BigDecimal("5.0"));
+        rider.setBalance(java.math.BigDecimal.ZERO);
+        deliveryManMapper.insert(rider);
+        return rider.getId();
     }
 
     private void checkUserStatus(Integer status, Long userId) {

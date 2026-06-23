@@ -13,7 +13,6 @@ import java.util.Set;
  * @since 1.0.0
  */
 @Getter
-@AllArgsConstructor
 public enum OrderStatus {
 
     PENDING_PAY(0, "待支付"),
@@ -30,6 +29,11 @@ public enum OrderStatus {
 
     private final Integer code;
     private final String desc;
+
+    OrderStatus(Integer code, String desc) {
+        this.code = code;
+        this.desc = desc;
+    }
 
     public static OrderStatus of(Integer code) {
         for (OrderStatus s : values()) {

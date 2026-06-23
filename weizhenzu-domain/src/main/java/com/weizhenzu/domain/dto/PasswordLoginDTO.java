@@ -20,9 +20,9 @@ public class PasswordLoginDTO implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    @Schema(description = "手机号", example = "13800138000")
-    @NotBlank(message = "手机号不能为空")
-    @Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
+    @Schema(description = "登录账号：手机号或用户名", example = "13800138000")
+    @NotBlank(message = "登录账号不能为空")
+    @Size(min = 2, max = 50, message = "账号长度2-50位")
     private String phone;
 
     @Schema(description = "密码", example = "password123")

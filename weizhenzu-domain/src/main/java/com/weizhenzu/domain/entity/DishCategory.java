@@ -31,6 +31,8 @@ public class DishCategory implements Serializable {
 
     private String name;
 
+    private String description;
+
     private Integer sort;
 
     private Integer status;

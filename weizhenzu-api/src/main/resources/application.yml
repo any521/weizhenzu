@@ -14,7 +14,7 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://127.0.0.1:3306/weizhenzu?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://127.0.0.1:3307/weizhenzu?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: weizhenzu
     password: weizhenzu123456
     hikari:
@@ -82,14 +82,33 @@ jwt:
 
 # 支付宝沙箱
 alipay:
-  app-id: 9021000140000000
-  private-key: your-private-key
-  public-key: alipay-public-key
+  app-id: 9021000164687969
+  private-key: MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCJM+lJ8UNEFVWSXlyZdbtJjPx7d4A5WlZPBoGavTVoLGp6V+sMtDaXH98SBGoJwaFugth1T4ZL1KtRz2cGOqBLH1stU0FBlZst8ZhsvVCZR6RqW13Xx95ar2Wda8FvviVS0BMGPZsd+h+p+3pBbn2UCbJNIWt7YDTLS0+M61Sqz9ybMcBiJ4u5jv2ecKGY0twIsXvZxc2Oyt0KWoPbePM8m7BJqBwOnPrnyD80jD7ISr+VGE9jUuweSBzLDplJIG+BbMifunFojj5Q+t304LOslaUXQyBEESuwolgB12lz6Uzh39o7d4buXIuUheZkcWmdAZPW6qkKhJEY/iB15IIlAgMBAAECggEAYZ1IVi5LoE3Zcuil0xzbIgonvCQaWzO1gkXrwc7qB3LKUr7oYUJ6MG0hhS0U0Fot43U+UcBBmQP2257G+ryNPMVTVl0MaX/qRvbDbmIGzPcWuADHNHVj8nslvaljl3/eCBw33NHJ4bsJ+iMMKS9WMxPvAkdLtByPky/CqkzoERoCizk+4DKl7iHJKtAwLgVn5BTf1G0zy1fzRKXHRQADbWeNicnBghJpXhRtPel1njD6ssRtYbbRDxLw0M0UVOv4lfQ5vod7ojp83mcV1c/Biqfno+YsvseiEupn8CGErNLk8MFUBvhsVgXAUErON8MLbMZDy8HBYgpiC6hXjIfxRQKBgQDZVnJEHjOjATsJ0isfSVbZQXs7vUEeErPXQsWVDiLzZYFi4C+Bj113GOyjRMmIbuXWcMnQNsxGOnOi2aSYiNydFZ5iNPUH13EAJoZUbzk6Sg2ZYOTTYM7ejMuOAsKSPR3q7KyTTmVE+MVbOPrpZGyrsiaSumlxwLll5w3d4Fw2YwKBgQChnB+Bknv7Yg8jxmwcp6mGzuTtaeN5x8KAExc5uwS6ePQsCLqeQ7BbNDeG/pB2H+gXzlOaHUzQRrvUo9ofDAUA89erY3qKBacDLutNxr1KfqlkiAZq8qQV+Dnt/m/AYK7Vfmt/78DutMxRRa34XlpRxNSv8QHFwPgYloPCD3tn1wKBgCZSm+tu9+PyP5rHuFrX77x3U2eBQ44t9hAq8fQKfhc0+s+YgEf0I6Lwfil7451vEI/za2KPhw2LGQDKJ7/NwjjgqwDeHaa4UnCYWm9g/VJN5H/7Gd47375WTT5JNk3bAP9/pB6FYE39H6+qKHQnBRJxY2PUAuvP8+EIEOXivd/JAoGABS2vhMNg3alCuu68wB5PPFac106xT1GrVddGwz7O4/rEODT/ZdrdZ87AiL7XejGDil++Jg4STAo4MpQdhSkpb+JgYsmJP6r2sw9p0tAveJeebe495mdoApw1nv6sLgnrEERAxZS1JfD9Kw2EiZTcaApalliuqduJF6CbEDjWx3kCgYEAthScdtN+X+o2CbTt4jyTBo5+XK1H8UROoSHV9V33WJtmleLVRAGQwSbHXmPjYSNsbaxtIG/C9BWxOjpMJ3b5mLSjKsSw/Imbj1gx8VVKuStSaU8PQqxSldUEAScCKZxxakuUGhp3fR2/ZFf20qqeGOtj/2EDvMrUo6g6RQZBo1w=
+  public-key: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvXfDtOQRIiZANpvyYTQ6oQc6rUmkc9Xj737yKigT4UHbX0lV8yaw96aylk5JAgjyW+oDPNazz8XNYpjEKPSRxjox2vUuDagnGb1ymDHq2QhZw0KMNFi5F0gs+f00R1dL/663DK/p/ouFks5ldsmQQSErnbYDd/2UrMUphf2bgv0PYP4Z4g7aF0+9BZWf5vnBeK5AkwvxQ7kD0fYFO9pOkWxnp8tVRYfeAzsQ0yHZiQ1XZgCOZMl3uUa/U2uKYR890GZsVtpgIWYFQG44iwk2qunEQWRubh0qegq3ptcJpbxSC2vxaPNBNj5/6KtKHCrVfVmhuX4xEAIjwG69EYJwvwIDAQAB
   gateway: https://openapi-sandbox.dl.alipaydev.com/gateway.do
   charset: UTF-8
   sign-type: RSA2
-  notify-url: http://localhost:8080/api/public/payment/alipay/callback
+  format: json
+  seller-id: 2088721102490512
+  notify-url: http://localhost:8080/api/public/payment/alipay/notify
   return-url: http://localhost:5173/payment/result
+
+# MinIO 对象存储
+minio:
+  enabled: true
+  endpoint: http://127.0.0.1:9000
+  access-key: weizhenzu
+  secret-key: weizhenzu123456
+  bucket: weizhenzu
+  public-domain: http://127.0.0.1:9000
+  local-base-path: ./uploads
+
+# 高德地图
+amap:
+  key: 6c5dac8fc9af3ca41f8b49736264c10e
+  regeo-url: https://restapi.amap.com/v3/geocode/regeo
+  distance-url: https://restapi.amap.com/v3/distance
+  max-radius-km: 10
 
 # Knife4j
 springdoc:

@@ -10,7 +10,6 @@ import lombok.Getter;
  * @since 1.0.0
  */
 @Getter
-@AllArgsConstructor
 public enum PayType {
 
     ALIPAY(1, "支付宝"),
@@ -19,6 +18,11 @@ public enum PayType {
 
     private final Integer code;
     private final String desc;
+
+    PayType(Integer code, String desc) {
+        this.code = code;
+        this.desc = desc;
+    }
 
     public static PayType of(Integer code) {
         for (PayType t : values()) {

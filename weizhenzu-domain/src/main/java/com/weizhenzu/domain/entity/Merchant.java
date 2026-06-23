@@ -43,4 +43,5 @@ public class Merchant extends BaseEntity {
     private String auditRemark;
     private BigDecimal rating;
     private Integer monthSales;
+    private String qualification;
 }

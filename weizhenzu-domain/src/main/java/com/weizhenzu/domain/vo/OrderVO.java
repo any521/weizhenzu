@@ -118,6 +118,9 @@ public class OrderVO implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime expectedTime;
 
+    @Schema(description = "配送任务ID")
+    private Long deliveryTaskId;
+
     @Schema(description = "是否已评价")
     private Integer isRated;
 

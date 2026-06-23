@@ -11,6 +11,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ----------------------------
 CREATE TABLE `t_user` (
   `id`              BIGINT       NOT NULL COMMENT '用户ID',
+  `username`        VARCHAR(50)  DEFAULT NULL COMMENT '用户名（唯一，可选）',
   `phone`           VARCHAR(64)  NOT NULL COMMENT '手机号（加密存储）',
   `phone_hash`      VARCHAR(64)  NOT NULL COMMENT '手机号哈希（用于查询）',
   `password`        VARCHAR(100) DEFAULT NULL COMMENT '密码（BCrypt，可选）',
@@ -34,6 +35,7 @@ CREATE TABLE `t_user` (
   `version`         INT          NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_phone_hash` (`phone_hash`),
+  UNIQUE KEY `uk_username` (`username`),
   KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='C端用户';
 

@@ -27,6 +27,8 @@ public class Coupon implements Serializable {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
+    private Long merchantId;
+
     private String name;
 
     private Integer type;

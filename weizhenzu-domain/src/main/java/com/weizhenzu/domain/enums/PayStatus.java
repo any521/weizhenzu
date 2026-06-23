@@ -10,7 +10,6 @@ import lombok.Getter;
  * @since 1.0.0
  */
 @Getter
-@AllArgsConstructor
 public enum PayStatus {
 
     UNPAID(0, "未支付"),
@@ -20,6 +19,11 @@ public enum PayStatus {
 
     private final Integer code;
     private final String desc;
+
+    PayStatus(Integer code, String desc) {
+        this.code = code;
+        this.desc = desc;
+    }
 
     public static PayStatus of(Integer code) {
         for (PayStatus s : values()) {

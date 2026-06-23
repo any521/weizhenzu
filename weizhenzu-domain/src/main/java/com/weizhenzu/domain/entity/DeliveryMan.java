@@ -42,6 +42,10 @@ public class DeliveryMan implements Serializable {
 
     private String realName;
 
+    private Integer gender;
+
+    private Integer level;
+
     private Integer status;
 
     private Integer onDuty;

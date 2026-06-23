@@ -10,7 +10,6 @@ import lombok.Getter;
  * @since 1.0.0
  */
 @Getter
-@AllArgsConstructor
 public enum SettlementStatus {
 
     PENDING(0, "待结算"),
@@ -19,6 +18,11 @@ public enum SettlementStatus {
 
     private final Integer code;
     private final String desc;
+
+    SettlementStatus(Integer code, String desc) {
+        this.code = code;
+        this.desc = desc;
+    }
 
     public static SettlementStatus of(Integer code) {
         if (code == null) {

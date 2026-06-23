@@ -1,18 +1,32 @@
 spring:
   datasource:
-    url: jdbc:mysql://mysql:3306/weizhenzu?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
-    username: root
-    password: ${MYSQL_PASSWORD:root}
+    url: jdbc:mysql://${MYSQL_HOST:mysql}:${MYSQL_PORT:3306}/${MYSQL_DB:weizhenzu}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USER:weizhenzu}
+    password: ${MYSQL_PASSWORD:weizhenzu123456}
   data:
     redis:
-      host: redis
-      port: 6379
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
   rabbitmq:
-    host: rabbitmq
-    port: 5672
-    username: ${RABBITMQ_USERNAME:guest}
-    password: ${RABBITMQ_PASSWORD:guest}
+    host: ${RABBITMQ_HOST:rabbitmq}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:weizhenzu}
+    password: ${RABBITMQ_PASSWORD:weizhenzu123456}
+    virtual-host: ${RABBITMQ_VHOST:/weizhenzu}
+
+minio:
+  endpoint: ${MINIO_ENDPOINT:http://minio:9000}
+  access-key: ${MINIO_ACCESS_KEY:weizhenzu}
+  secret-key: ${MINIO_SECRET_KEY:weizhenzu123456}
+  bucket: weizhenzu
+  public-domain: ${MINIO_PUBLIC_DOMAIN:http://localhost:9000}
+
+jwt:
+  secret: ${JWT_SECRET:weizhenzu-secret-key-must-be-at-least-32-bytes-long-for-hs256}
+
+amap:
+  key: ${AMAP_KEY:6c5dac8fc9af3ca41f8b49736264c10e}
 
 logging:
   level:

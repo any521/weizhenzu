@@ -38,7 +38,7 @@ public class MerchantDishController {
     @Operation(summary = "菜品详情")
     @GetMapping("/{id}")
     public Result<DishVO> detail(@PathVariable Long id) {
-        return Result.ok(dishService.detail(id));
+        return Result.ok(dishService.merchantDetail(id));
     }
 
     @Operation(summary = "新增菜品")

@@ -6,6 +6,7 @@ import com.weizhenzu.domain.dto.PasswordLoginDTO;
 import com.weizhenzu.domain.dto.RefreshTokenDTO;
 import com.weizhenzu.domain.dto.SmsCodeDTO;
 import com.weizhenzu.domain.dto.SmsLoginDTO;
+import com.weizhenzu.domain.dto.UserRegisterDTO;
 import com.weizhenzu.domain.vo.LoginVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,6 +33,12 @@ public class UserAuthController {
     public Result<Void> sendSmsCode(@Valid @RequestBody SmsCodeDTO dto) {
         authService.sendSmsCode(dto);
         return Result.ok();
+    }
+
+    @Operation(summary = "用户注册")
+    @PostMapping("/register")
+    public Result<Long> register(@Valid @RequestBody UserRegisterDTO dto) {
+        return Result.ok(authService.registerUser(dto));
     }
 
     @Operation(summary = "短信验证码登录")

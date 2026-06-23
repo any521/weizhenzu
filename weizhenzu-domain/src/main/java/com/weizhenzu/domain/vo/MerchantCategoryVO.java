@@ -25,4 +25,7 @@ public class MerchantCategoryVO implements Serializable {
 
     @Schema(description = "分类图标")
     private String icon;
+
+    @Schema(description = "分类背景色")
+    private String color;
 }

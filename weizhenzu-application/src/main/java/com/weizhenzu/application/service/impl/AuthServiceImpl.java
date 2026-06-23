@@ -95,7 +95,7 @@ public class AuthServiceImpl implements AuthService {
                 avatar = user.getAvatar();
             }
             case MERCHANT -> {
-                Merchant m = merchantMapper.selectByPhoneHash(phoneHash);
+                Merchant m = merchantMapper.selectByPhoneHashRaw(phoneHash);
                 if (m == null) throw new BizException(ResultCode.MERCHANT_NOT_FOUND);
                 if (m.getStatus() != 1) throw new BizException(ResultCode.MERCHANT_AUDITING);
                 userId = m.getId();
@@ -151,7 +151,7 @@ public class AuthServiceImpl implements AuthService {
                 avatar = user.getAvatar();
             }
             case MERCHANT -> {
-                Merchant m = merchantMapper.selectByPhoneHash(phoneHash);
+                Merchant m = merchantMapper.selectByPhoneHashRaw(phoneHash);
                 if (m == null || !passwordEncoder.matches(dto.getPassword(), m.getPassword())) {
                     throw new BizException(ResultCode.MERCHANT_NOT_FOUND, "账号或密码错误");
                 }

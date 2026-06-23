@@ -31,6 +31,8 @@ public class MerchantCategory implements Serializable {
 
     private String icon;
 
+    private String color;
+
     private Integer sort;
 
     private Integer status;

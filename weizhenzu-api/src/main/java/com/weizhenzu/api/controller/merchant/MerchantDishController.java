@@ -55,8 +55,8 @@ public class MerchantDishController {
     }
 
     @Operation(summary = "上下架菜品")
-    @PutMapping("/{id}/status")
-    public Result<Void> updateStatus(@PathVariable Long id, @RequestParam Integer status) {
+    @PutMapping("/{id}/status/{status}")
+    public Result<Void> updateStatus(@PathVariable Long id, @PathVariable Integer status) {
         dishService.updateStatus(id, status);
         return Result.ok();
     }

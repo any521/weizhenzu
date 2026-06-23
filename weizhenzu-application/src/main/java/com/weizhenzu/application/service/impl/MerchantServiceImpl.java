@@ -51,7 +51,7 @@ public class MerchantServiceImpl implements MerchantService {
     @Override
     public Long register(MerchantRegisterDTO dto) {
         String phoneHash = PhoneUtils.hash(dto.getPhone());
-        Merchant exists = merchantMapper.selectByPhoneHash(phoneHash);
+        Merchant exists = merchantMapper.selectByPhoneHashRaw(phoneHash);
         if (exists != null) {
             throw new BizException(ResultCode.PARAM_ERROR, "手机号已注册");
         }
@@ -81,7 +81,7 @@ public class MerchantServiceImpl implements MerchantService {
 
     @Override
     public MerchantVO detail(Long id) {
-        Merchant m = merchantMapper.selectById(id);
+        Merchant m = merchantMapper.selectByIdRaw(id);
         if (m == null) {
             throw new BizException(ResultCode.MERCHANT_NOT_FOUND);
         }
@@ -112,7 +112,7 @@ public class MerchantServiceImpl implements MerchantService {
 
     @Override
     public List<DishCategoryVO> menu(Long merchantId) {
-        Merchant m = merchantMapper.selectById(merchantId);
+        Merchant m = merchantMapper.selectByIdRaw(merchantId);
         if (m == null) {
             throw new BizException(ResultCode.MERCHANT_NOT_FOUND);
         }
@@ -167,6 +167,7 @@ public class MerchantServiceImpl implements MerchantService {
             vo.setId(c.getId());
             vo.setName(c.getName());
             vo.setIcon(c.getIcon());
+            vo.setColor(c.getColor());
             return vo;
         }).collect(Collectors.toList());
     }
@@ -176,7 +177,7 @@ public class MerchantServiceImpl implements MerchantService {
                                String openTime, Integer isOpen, BigDecimal minOrderAmount,
                                BigDecimal deliveryFee, BigDecimal packingFee, Integer deliveryRadius) {
         Long merchantId = UserContext.getUserId();
-        Merchant m = merchantMapper.selectById(merchantId);
+        Merchant m = merchantMapper.selectByIdRaw(merchantId);
         if (m == null) {
             throw new BizException(ResultCode.MERCHANT_NOT_FOUND);
         }

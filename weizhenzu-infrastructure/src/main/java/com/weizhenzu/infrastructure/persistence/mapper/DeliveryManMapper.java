@@ -23,6 +23,12 @@ public interface DeliveryManMapper extends BaseMapper<DeliveryMan> {
     DeliveryMan selectByPhoneHash(@Param("phoneHash") String phoneHash);
 
     /**
+     * 根据邮箱查询骑手
+     */
+    @Select("SELECT * FROM t_delivery_man WHERE email = #{email} AND deleted = 0 LIMIT 1")
+    DeliveryMan selectByEmail(@Param("email") String email);
+
+    /**
      * 更新骑手位置
      */
     @Update("UPDATE t_delivery_man SET longitude = #{lng}, latitude = #{lat}, " +

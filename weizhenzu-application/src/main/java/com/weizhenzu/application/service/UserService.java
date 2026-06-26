@@ -27,4 +27,9 @@ public interface UserService {
      * 修改密码
      */
     void updatePassword(PasswordUpdateDTO dto);
+
+    /**
+     * 解绑手机号
+     */
+    void unbindPhone();
 }

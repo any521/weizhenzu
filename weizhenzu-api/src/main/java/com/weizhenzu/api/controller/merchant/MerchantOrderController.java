@@ -1,8 +1,10 @@
 package com.weizhenzu.api.controller.merchant;
 
 import com.weizhenzu.application.service.OrderService;
+import com.weizhenzu.common.exception.BizException;
 import com.weizhenzu.common.result.PageResult;
 import com.weizhenzu.common.result.Result;
+import com.weizhenzu.common.result.ResultCode;
 import com.weizhenzu.domain.vo.OrderVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -58,6 +60,20 @@ public class MerchantOrderController {
     @PostMapping("/{id}/ready")
     public Result<Void> ready(@PathVariable Long id) {
         orderService.merchantReady(id);
+        return Result.ok();
+    }
+
+    @Operation(summary = "更新订单状态")
+    @PutMapping("/{id}/status/{status}")
+    public Result<Void> updateStatus(@PathVariable Long id, @PathVariable Integer status) {
+        // 根据状态码分发到对应的业务方法
+        switch (status) {
+            case 2 -> // MERCHANT_ACCEPTED - 商家接单
+                orderService.merchantAccept(id);
+            case 8 -> // CANCELED - 商家拒单（需要前端传reason，这里如果没有reason给个默认值）
+                orderService.merchantReject(id, "商家取消订单");
+            default -> throw new BizException(ResultCode.PARAM_ERROR, "不支持的状态更新: " + status);
+        }
         return Result.ok();
     }
 }

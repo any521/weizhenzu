@@ -33,6 +33,9 @@ public class DishCategory implements Serializable {
 
     private String description;
 
+    /** 所属平台分类ID */
+    private Long categoryId;
+
     private Integer sort;
 
     private Integer status;

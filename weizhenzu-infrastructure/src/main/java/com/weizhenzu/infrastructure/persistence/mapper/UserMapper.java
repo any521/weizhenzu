@@ -26,4 +26,10 @@ public interface UserMapper extends BaseMapper<User> {
      */
     @Select("SELECT * FROM t_user WHERE username = #{username} AND deleted = 0 LIMIT 1")
     User selectByUsername(@Param("username") String username);
+
+    /**
+     * 根据邮箱查询用户
+     */
+    @Select("SELECT * FROM t_user WHERE email = #{email} AND deleted = 0 LIMIT 1")
+    User selectByEmail(@Param("email") String email);
 }

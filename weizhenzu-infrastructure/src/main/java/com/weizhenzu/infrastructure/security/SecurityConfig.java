@@ -74,12 +74,15 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/user/auth/**",
                     "/api/user/merchants/**",
+                    "/api/user/dishes/**",
+                    "/api/user/categories/**",
                     "/api/user/recommend/**",
                     "/api/user/coupons/available",
                     "/api/merchant/auth/**",
                     "/api/rider/auth/**",
                     "/api/admin/auth/**",
                     "/api/public/**",
+                    "/ws/**",
                     "/doc.html", "/webjars/**", "/v3/api-docs/**", "/swagger-ui/**",
                     "/actuator/**", "/favicon.ico"
                 ).permitAll()

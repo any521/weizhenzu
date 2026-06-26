@@ -30,6 +30,12 @@ public class OrderVO implements Serializable {
     @Schema(description = "用户ID")
     private Long userId;
 
+    @Schema(description = "用户昵称")
+    private String userName;
+
+    @Schema(description = "用户手机号")
+    private String userPhone;
+
     @Schema(description = "商家ID")
     private Long merchantId;
 
@@ -38,6 +44,9 @@ public class OrderVO implements Serializable {
 
     @Schema(description = "商家Logo")
     private String merchantLogo;
+
+    @Schema(description = "商家电话")
+    private String merchantPhone;
 
     @Schema(description = "订单状态")
     private Integer status;
@@ -121,8 +130,32 @@ public class OrderVO implements Serializable {
     @Schema(description = "配送任务ID")
     private Long deliveryTaskId;
 
+    @Schema(description = "配送任务状态：0待抢1已抢2到店3取餐4配送中5已送达6取消")
+    private Integer deliveryTaskStatus;
+
+    @Schema(description = "商家地址（骑手端显示用）")
+    private String merchantAddress;
+
+    @Schema(description = "商家经度")
+    private BigDecimal merchantLng;
+
+    @Schema(description = "商家纬度")
+    private BigDecimal merchantLat;
+
+    @Schema(description = "用户地址")
+    private String userAddress;
+
+    @Schema(description = "用户经度")
+    private BigDecimal userLng;
+
+    @Schema(description = "用户纬度")
+    private BigDecimal userLat;
+
     @Schema(description = "是否已评价")
     private Integer isRated;
+
+    @Schema(description = "用餐类型：1=堂食，2=外卖")
+    private Integer diningType;
 
     @Schema(description = "创建时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

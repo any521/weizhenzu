@@ -114,4 +114,10 @@ public class MerchantVO implements Serializable {
     @Schema(description = "预计送达时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime expectedTime;
+
+    @Schema(description = "是否支持外卖：0否 1是")
+    private Integer supportDelivery;
+
+    @Schema(description = "是否支持自取：0否 1是")
+    private Integer supportPickup;
 }

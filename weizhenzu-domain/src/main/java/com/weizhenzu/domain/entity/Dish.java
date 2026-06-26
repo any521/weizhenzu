@@ -30,7 +30,15 @@ public class Dish implements Serializable {
 
     private Long merchantId;
 
+    /**
+     * 商家菜品分类ID（关联 t_dish_category.id）
+     */
     private Long categoryId;
+
+    /**
+     * 平台分类ID（关联 t_merchant_category.id，用于平台级标签归类）
+     */
+    private Long platformCategoryId;
 
     private String name;
 

@@ -26,9 +26,24 @@ public interface PaymentService {
     PaymentVO queryPayment(Long orderId);
 
     /**
+     * 按支付单号查询支付状态（DB）
+     */
+    PaymentVO queryPaymentByNo(String paymentNo);
+
+    /**
      * 主动查询支付状态（调用第三方同步状态）
      */
     PaymentVO queryPaymentStatus(Long orderId);
+
+    /**
+     * 按支付单号主动查询支付状态（调用第三方同步状态）
+     */
+    PaymentVO queryPaymentStatusByNo(String paymentNo);
+
+    /**
+     * 按支付单号关闭支付单
+     */
+    void closePaymentByNo(String paymentNo);
 
     /**
      * 支付回调（支付宝/微信）

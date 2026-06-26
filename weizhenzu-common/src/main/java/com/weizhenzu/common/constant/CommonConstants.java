@@ -19,6 +19,8 @@ public interface CommonConstants {
     String REFRESH_TOKEN_KEY = REDIS_KEY_PREFIX + "refresh:";
     String SMS_CODE_KEY = REDIS_KEY_PREFIX + "sms:";
     String SMS_CODE_INTERVAL_KEY = REDIS_KEY_PREFIX + "sms:interval:";
+    String EMAIL_CODE_KEY = REDIS_KEY_PREFIX + "email:";
+    String EMAIL_CODE_INTERVAL_KEY = REDIS_KEY_PREFIX + "email:interval:";
     String IDEMPOTENT_KEY = REDIS_KEY_PREFIX + "idempotent:";
     String LOCK_KEY = REDIS_KEY_PREFIX + "lock:";
     String RATE_LIMIT_KEY = REDIS_KEY_PREFIX + "rate:";
@@ -28,6 +30,9 @@ public interface CommonConstants {
     long REFRESH_TOKEN_EXPIRE_SECONDS = 604800L;  // 7天
     long SMS_CODE_EXPIRE_SECONDS = 300L;          // 5分钟
     long SMS_CODE_INTERVAL_SECONDS = 60L;         // 60秒间隔
+    long EMAIL_CODE_EXPIRE_SECONDS = 300L;        // 5分钟
+    long EMAIL_CODE_INTERVAL_SECONDS = 60L;       // 60秒间隔
+    int EMAIL_CODE_LENGTH = 6;                    // 邮箱验证码长度
 
     int MAX_PAGE_SIZE = 100;
     int DEFAULT_PAGE_SIZE = 10;

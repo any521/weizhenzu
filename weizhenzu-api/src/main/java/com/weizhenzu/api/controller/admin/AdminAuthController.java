@@ -1,8 +1,8 @@
 package com.weizhenzu.api.controller.admin;
 
+import com.weizhenzu.application.service.AdminService;
 import com.weizhenzu.application.service.AuthService;
 import com.weizhenzu.common.annotation.RequireLogin;
-import com.weizhenzu.common.context.UserContext;
 import com.weizhenzu.common.enums.UserTypeEnum;
 import com.weizhenzu.common.result.Result;
 import com.weizhenzu.domain.dto.AdminPasswordLoginDTO;
@@ -17,9 +17,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * 管理后台认证 Controller
  *
@@ -33,6 +30,7 @@ import java.util.Map;
 public class AdminAuthController {
 
     private final AuthService authService;
+    private final AdminService adminService;
 
     @Operation(summary = "发送短信验证码")
     @PostMapping("/sms-code")
@@ -74,13 +72,7 @@ public class AdminAuthController {
     @Operation(summary = "获取当前管理员信息")
     @GetMapping("/info")
     @RequireLogin(UserTypeEnum.ADMIN)
-    public Result<Map<String, Object>> info() {
-        UserContext.LoginUser user = UserContext.get();
-        Map<String, Object> data = new HashMap<>();
-        data.put("id", user == null ? null : user.getId());
-        data.put("username", user == null ? null : user.getUsername());
-        data.put("nickname", user == null ? null : user.getNickname());
-        data.put("type", "admin");
-        return Result.ok(data);
+    public Result<java.util.Map<String, Object>> info() {
+        return Result.ok(adminService.getCurrentProfile());
     }
 }

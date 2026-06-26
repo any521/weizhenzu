@@ -44,4 +44,6 @@ public class Merchant extends BaseEntity {
     private BigDecimal rating;
     private Integer monthSales;
     private String qualification;
+    private Integer supportDelivery;
+    private Integer supportPickup;
 }

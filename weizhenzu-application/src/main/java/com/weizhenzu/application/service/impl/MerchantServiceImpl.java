@@ -95,13 +95,15 @@ public class MerchantServiceImpl implements MerchantService {
     }
 
     @Override
-    public PageResult<MerchantVO> userPage(Integer current, Integer size, Long categoryId, String keyword) {
+    public PageResult<MerchantVO> userPage(Integer current, Integer size, Long categoryId, String keyword, Integer deliveryType) {
         Page<Merchant> page = new Page<>(current == null ? 1 : current, size == null ? 10 : size);
         LambdaQueryWrapper<Merchant> wrapper = new LambdaQueryWrapper<Merchant>()
                 .eq(Merchant::getStatus, 1)
                 .eq(Merchant::getIsOpen, 1)
                 .eq(categoryId != null, Merchant::getCategoryId, categoryId)
                 .like(keyword != null && !keyword.isEmpty(), Merchant::getName, keyword)
+                .eq(deliveryType != null && deliveryType == 1, Merchant::getSupportDelivery, 1)
+                .eq(deliveryType != null && deliveryType == 2, Merchant::getSupportPickup, 1)
                 .orderByDesc(Merchant::getRating);
         Page<Merchant> result = merchantMapper.selectPage(page, wrapper);
         List<MerchantVO> records = result.getRecords().stream()
@@ -138,6 +140,7 @@ public class MerchantServiceImpl implements MerchantService {
                 dv.setId(d.getId());
                 dv.setMerchantId(d.getMerchantId());
                 dv.setCategoryId(d.getCategoryId());
+                dv.setPlatformCategoryId(d.getPlatformCategoryId());
                 dv.setName(d.getName());
                 dv.setDescription(d.getDescription());
                 dv.setImage(d.getImage());
@@ -149,6 +152,7 @@ public class MerchantServiceImpl implements MerchantService {
                 dv.setSpicy(d.getSpicy());
                 dv.setStatus(d.getStatus());
                 dv.setSort(d.getSort());
+                dv.setCategoryName(c.getName());
                 dv.setSpecs(Collections.emptyList());
                 return dv;
             }).collect(Collectors.toList()));
@@ -173,9 +177,10 @@ public class MerchantServiceImpl implements MerchantService {
     }
 
     @Override
-    public void updateSettings(String name, String logo, String description, String notice,
+    public void updateSettings(String name, String logo, String contactPerson, String phone, String description, String notice,
                                String openTime, Integer isOpen, BigDecimal minOrderAmount,
-                               BigDecimal deliveryFee, BigDecimal packingFee, Integer deliveryRadius) {
+                               BigDecimal deliveryFee, BigDecimal packingFee, Integer deliveryRadius,
+                               Integer supportDelivery, Integer supportPickup) {
         Long merchantId = UserContext.getUserId();
         Merchant m = merchantMapper.selectByIdRaw(merchantId);
         if (m == null) {
@@ -185,6 +190,8 @@ public class MerchantServiceImpl implements MerchantService {
         update.setId(merchantId);
         update.setName(name);
         update.setLogo(logo);
+        update.setContactName(contactPerson);
+        update.setContactPhone(phone);
         update.setDescription(description);
         update.setNotice(notice);
         update.setOpenTime(openTime);
@@ -193,6 +200,8 @@ public class MerchantServiceImpl implements MerchantService {
         update.setDeliveryFee(deliveryFee);
         update.setPackingFee(packingFee);
         update.setDeliveryRadius(deliveryRadius);
+        update.setSupportDelivery(supportDelivery);
+        update.setSupportPickup(supportPickup);
         merchantMapper.updateById(update);
     }
 
@@ -297,6 +306,13 @@ public class MerchantServiceImpl implements MerchantService {
         vo.setName(m.getName());
         vo.setLogo(m.getLogo());
         vo.setCategoryId(m.getCategoryId());
+        // 填充分类名称
+        if (m.getCategoryId() != null) {
+            MerchantCategory category = merchantCategoryMapper.selectById(m.getCategoryId());
+            if (category != null) {
+                vo.setCategoryName(category.getName());
+            }
+        }
         vo.setDescription(m.getDescription());
         vo.setNotice(m.getNotice());
         vo.setProvince(m.getProvince());
@@ -314,6 +330,14 @@ public class MerchantServiceImpl implements MerchantService {
         vo.setStatus(m.getStatus());
         vo.setRating(m.getRating());
         vo.setMonthSales(m.getMonthSales());
+        vo.setMonthlySales(m.getMonthSales());
+        vo.setSupportDelivery(m.getSupportDelivery());
+        vo.setSupportPickup(m.getSupportPickup());
+        // 补充缺失的字段映射
+        vo.setContactPerson(m.getContactName());
+        vo.setPhone(m.getContactPhone());
+        vo.setCreateTime(m.getCreatedAt());
+        vo.setQualification(m.getQualification());
         return vo;
     }
 }

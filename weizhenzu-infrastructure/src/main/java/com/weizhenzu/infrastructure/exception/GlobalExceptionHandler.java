@@ -13,6 +13,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.stream.Collectors;
 
@@ -66,6 +67,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public Result<?> handleMethod(HttpRequestMethodNotSupportedException e) {
         return Result.fail(ResultCode.METHOD_NOT_ALLOWED);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public Result<?> handleMaxUploadSize(MaxUploadSizeExceededException e, HttpServletRequest req) {
+        log.warn("文件上传超出大小限制: uri={}, msg={}", req.getRequestURI(), e.getMessage());
+        return Result.fail(ResultCode.PARAM_ERROR.getCode(), "文件大小不能超过 10MB");
     }
 
     @ExceptionHandler(Exception.class)

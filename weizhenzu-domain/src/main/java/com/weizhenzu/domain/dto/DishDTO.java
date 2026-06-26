@@ -21,9 +21,12 @@ public class DishDTO implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    @Schema(description = "菜品分类ID")
+    @Schema(description = "菜品分类ID（商家自定义分类）")
     @NotNull(message = "菜品分类不能为空")
     private Long categoryId;
+
+    @Schema(description = "平台分类ID（平台级分类标签，可选）")
+    private Long platformCategoryId;
 
     @Schema(description = "菜品名称")
     @NotBlank(message = "菜品名称不能为空")

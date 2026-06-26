@@ -23,12 +23,12 @@ docker-compose logs -f rabbitmq
 
 ## 服务访问
 
-| 服务 | 地址 | 用户名 | 密码 |
-| --- | --- | --- | --- |
-| MySQL | localhost:3306 | weizhenzu | weizhenzu123456 |
-| Redis | localhost:6379 | - | - |
+| 服务 | 地址                     | 用户名 | 密码 |
+| --- |------------------------| --- | --- |
+| MySQL | localhost:3307         | weizhenzu | weizhenzu123456 |
+| Redis | localhost:6379         | - | - |
 | RabbitMQ Web | http://localhost:15672 | weizhenzu | weizhenzu123456 |
-| RabbitMQ AMQP | localhost:5672 | weizhenzu | weizhenzu123456 |
+| RabbitMQ AMQP | localhost:5672         | weizhenzu | weizhenzu123456 |
 
 ## 停止与清理
 

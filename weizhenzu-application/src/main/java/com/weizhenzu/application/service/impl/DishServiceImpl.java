@@ -13,11 +13,13 @@ import com.weizhenzu.domain.dto.DishDTO;
 import com.weizhenzu.domain.entity.Dish;
 import com.weizhenzu.domain.entity.DishCategory;
 import com.weizhenzu.domain.entity.DishSpec;
+import com.weizhenzu.domain.entity.MerchantCategory;
 import com.weizhenzu.domain.vo.DishSpecVO;
 import com.weizhenzu.domain.vo.DishVO;
 import com.weizhenzu.infrastructure.persistence.mapper.DishCategoryMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.DishMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.DishSpecMapper;
+import com.weizhenzu.infrastructure.persistence.mapper.MerchantCategoryMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -43,21 +45,26 @@ public class DishServiceImpl implements DishService {
     private final DishMapper dishMapper;
     private final DishSpecMapper dishSpecMapper;
     private final DishCategoryMapper dishCategoryMapper;
+    private final MerchantCategoryMapper merchantCategoryMapper;
     private final ObjectMapper objectMapper;
 
     @Override
     public DishVO detail(Long id) {
         Dish dish = dishMapper.selectById(id);
-        if (dish == null) {
+        if (dish == null || !Integer.valueOf(1).equals(dish.getStatus())) {
             throw new BizException(ResultCode.DISH_NOT_FOUND);
         }
-        return toVO(dish, true);
+        DishVO vo = toVO(dish, true);
+        fillCategoryNames(vo, dish);
+        return vo;
     }
 
     @Override
     public DishVO merchantDetail(Long id) {
         Dish dish = getAndCheckOwner(id);
-        return toVO(dish, true);
+        DishVO vo = toVO(dish, true);
+        fillCategoryNames(vo, dish);
+        return vo;
     }
 
     @Override
@@ -67,6 +74,7 @@ public class DishServiceImpl implements DishService {
         Dish dish = new Dish();
         dish.setMerchantId(merchantId);
         dish.setCategoryId(dto.getCategoryId());
+        dish.setPlatformCategoryId(dto.getPlatformCategoryId());
         dish.setName(dto.getName());
         dish.setDescription(dto.getDescription());
         dish.setImage(dto.getImage());
@@ -89,6 +97,7 @@ public class DishServiceImpl implements DishService {
     public void update(Long id, DishDTO dto) {
         Dish dish = getAndCheckOwner(id);
         dish.setCategoryId(dto.getCategoryId());
+        dish.setPlatformCategoryId(dto.getPlatformCategoryId());
         dish.setName(dto.getName());
         dish.setDescription(dto.getDescription());
         dish.setImage(dto.getImage());
@@ -127,18 +136,34 @@ public class DishServiceImpl implements DishService {
                 .orderByAsc(Dish::getSort)
                 .orderByDesc(Dish::getCreatedAt);
         Page<Dish> result = dishMapper.selectPage(page, wrapper);
-        Map<Long, String> categoryNameMap = buildCategoryNameMap(result.getRecords());
+        Map<Long, String> categoryNameMap = buildDishCategoryNameMap(result.getRecords());
+        Map<Long, String> platformCategoryNameMap = buildPlatformCategoryNameMap(result.getRecords());
         List<DishVO> records = result.getRecords().stream()
                 .map(d -> {
                     DishVO vo = toVO(d, false);
                     vo.setCategoryName(categoryNameMap.getOrDefault(d.getCategoryId(), ""));
+                    vo.setPlatformCategoryName(platformCategoryNameMap.getOrDefault(d.getPlatformCategoryId(), ""));
                     return vo;
                 })
                 .collect(Collectors.toList());
         return PageResult.of(records, result.getTotal(), result.getCurrent(), result.getSize());
     }
 
-    private Map<Long, String> buildCategoryNameMap(List<Dish> dishes) {
+    /**
+     * 填充菜品的分类名称（商家分类和平台分类）
+     */
+    private void fillCategoryNames(DishVO vo, Dish dish) {
+        if (dish.getCategoryId() != null) {
+            DishCategory cat = dishCategoryMapper.selectById(dish.getCategoryId());
+            if (cat != null) vo.setCategoryName(cat.getName());
+        }
+        if (dish.getPlatformCategoryId() != null) {
+            MerchantCategory pCat = merchantCategoryMapper.selectById(dish.getPlatformCategoryId());
+            if (pCat != null) vo.setPlatformCategoryName(pCat.getName());
+        }
+    }
+
+    private Map<Long, String> buildDishCategoryNameMap(List<Dish> dishes) {
         List<Long> categoryIds = dishes.stream()
                 .map(Dish::getCategoryId)
                 .distinct()
@@ -149,6 +174,19 @@ public class DishServiceImpl implements DishService {
         }
         return dishCategoryMapper.selectBatchIds(categoryIds).stream()
                 .collect(Collectors.toMap(DishCategory::getId, DishCategory::getName, (a, b) -> a));
+    }
+
+    private Map<Long, String> buildPlatformCategoryNameMap(List<Dish> dishes) {
+        List<Long> platformCategoryIds = dishes.stream()
+                .map(Dish::getPlatformCategoryId)
+                .distinct()
+                .filter(id -> id != null)
+                .collect(Collectors.toList());
+        if (platformCategoryIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return merchantCategoryMapper.selectBatchIds(platformCategoryIds).stream()
+                .collect(Collectors.toMap(MerchantCategory::getId, MerchantCategory::getName, (a, b) -> a));
     }
 
     private Dish getAndCheckOwner(Long id) {
@@ -165,6 +203,7 @@ public class DishServiceImpl implements DishService {
         vo.setId(dish.getId());
         vo.setMerchantId(dish.getMerchantId());
         vo.setCategoryId(dish.getCategoryId());
+        vo.setPlatformCategoryId(dish.getPlatformCategoryId());
         vo.setName(dish.getName());
         vo.setDescription(dish.getDescription());
         vo.setImage(dish.getImage());

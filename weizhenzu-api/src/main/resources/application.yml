@@ -12,6 +12,13 @@ spring:
   profiles:
     active: dev
 
+  # 文件上传大小限制：10MB
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+      enabled: true
+
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://127.0.0.1:3307/weizhenzu?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
@@ -91,7 +98,7 @@ alipay:
   format: json
   seller-id: 2088721102490512
   notify-url: http://localhost:8080/api/public/payment/alipay/notify
-  return-url: http://localhost:5173/payment/result
+  return-url: http://localhost:5173/#/pages/order/result
 
 # MinIO 对象存储
 minio:
@@ -109,6 +116,34 @@ amap:
   regeo-url: https://restapi.amap.com/v3/geocode/regeo
   distance-url: https://restapi.amap.com/v3/distance
   max-radius-km: 10
+
+# 邮件服务（用于发送真实邮箱验证码）
+# 说明：登录与注册使用邮箱验证码登录模式，验证码通过 SMTP 真实发送到用户邮箱
+# 如需启用，请在 application-dev.yml / application-prod.yml 中覆盖 username / password
+mail:
+  enabled: true
+  host: smtp.163.com
+  port: 465
+  username: 13837062159@163.com
+  password: CGsi9XS9wsz9niru
+  protocol: smtps
+  default-encoding: UTF-8
+  from: 13837062159@163.com
+  from-name: 味真足外卖
+  properties:
+    mail:
+      smtp:
+        auth: true
+        starttls:
+          enable: false
+        ssl:
+          enable: true
+        socketFactory:
+          class: javax.net.ssl.SSLSocketFactory
+      smtps:
+        auth: true
+        ssl:
+          enable: true
 
 # Knife4j
 springdoc:

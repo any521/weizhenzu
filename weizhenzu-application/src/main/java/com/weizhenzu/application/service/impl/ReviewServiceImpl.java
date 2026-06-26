@@ -8,10 +8,14 @@ import com.weizhenzu.common.exception.BizException;
 import com.weizhenzu.common.result.PageResult;
 import com.weizhenzu.common.result.ResultCode;
 import com.weizhenzu.domain.dto.ReviewCreateDTO;
+import com.weizhenzu.domain.entity.DeliveryMan;
+import com.weizhenzu.domain.entity.Merchant;
 import com.weizhenzu.domain.entity.Order;
 import com.weizhenzu.domain.entity.Review;
 import com.weizhenzu.domain.entity.User;
 import com.weizhenzu.domain.vo.ReviewVO;
+import com.weizhenzu.infrastructure.persistence.mapper.MerchantMapper;
+import com.weizhenzu.infrastructure.persistence.mapper.DeliveryManMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.OrderMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.ReviewMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.UserMapper;
@@ -41,6 +45,8 @@ public class ReviewServiceImpl implements ReviewService {
     private final ReviewMapper reviewMapper;
     private final OrderMapper orderMapper;
     private final UserMapper userMapper;
+    private final MerchantMapper merchantMapper;
+    private final DeliveryManMapper deliveryManMapper;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -53,6 +59,11 @@ public class ReviewServiceImpl implements ReviewService {
         }
         if (Integer.valueOf(1).equals(order.getIsRated())) {
             throw new BizException(ResultCode.PARAM_ERROR, "订单已评价");
+        }
+        // 只有已送达(6)或已完成(7)的订单才能评价
+        if (order.getStatus() == null ||
+                (order.getStatus() != 6 && order.getStatus() != 7)) {
+            throw new BizException(ResultCode.ORDER_STATUS_ERROR, "订单尚未送达，无法评价");
         }
 
         Review r = new Review();
@@ -79,7 +90,54 @@ public class ReviewServiceImpl implements ReviewService {
         // 标记订单已评价
         order.setIsRated(1);
         orderMapper.updateById(order);
+
+        // 更新商家评分（简单平均）
+        try {
+            updateMerchantRating(order.getMerchantId());
+        } catch (Exception ignored) {}
+
+        // 更新骑手评分（如果有骑手）
+        if (order.getDeliveryManId() != null) {
+            try {
+                updateRiderRating(order.getDeliveryManId());
+            } catch (Exception ignored) {}
+        }
+
         return r.getId();
+    }
+
+    private void updateMerchantRating(Long merchantId) {
+        if (merchantId == null) return;
+        LambdaQueryWrapper<Review> qw = new LambdaQueryWrapper<>();
+        qw.eq(Review::getMerchantId, merchantId).eq(Review::getStatus, 1);
+        List<Review> reviews = reviewMapper.selectList(qw);
+        if (reviews.isEmpty()) return;
+        double avg = reviews.stream()
+                .filter(r -> r.getRating() != null)
+                .mapToInt(Review::getRating)
+                .average().orElse(5.0);
+        Merchant merchant = merchantMapper.selectById(merchantId);
+        if (merchant != null) {
+            merchant.setRating(java.math.BigDecimal.valueOf(Math.round(avg * 10) / 10.0));
+            merchantMapper.updateById(merchant);
+        }
+    }
+
+    private void updateRiderRating(Long riderId) {
+        if (riderId == null) return;
+        LambdaQueryWrapper<Review> qw = new LambdaQueryWrapper<>();
+        qw.eq(Review::getDeliveryManId, riderId).eq(Review::getStatus, 1);
+        List<Review> reviews = reviewMapper.selectList(qw);
+        if (reviews.isEmpty()) return;
+        double avg = reviews.stream()
+                .filter(r -> r.getDeliveryScore() != null)
+                .mapToInt(Review::getDeliveryScore)
+                .average().orElse(5.0);
+        DeliveryMan dm = deliveryManMapper.selectById(riderId);
+        if (dm != null) {
+            dm.setRating(java.math.BigDecimal.valueOf(Math.round(avg * 10) / 10.0));
+            deliveryManMapper.updateById(dm);
+        }
     }
 
     @Override

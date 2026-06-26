@@ -2,6 +2,8 @@ package com.weizhenzu.api.controller.user;
 
 import com.weizhenzu.application.service.OrderService;
 import com.weizhenzu.common.annotation.Idempotent;
+import com.weizhenzu.common.annotation.RequireLogin;
+import com.weizhenzu.common.enums.UserTypeEnum;
 import com.weizhenzu.common.result.PageResult;
 import com.weizhenzu.common.result.Result;
 import com.weizhenzu.domain.dto.OrderCancelDTO;
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "C端-订单", description = "用户订单相关接口")
 @RestController
 @RequestMapping("/api/user/orders")
+@RequireLogin(UserTypeEnum.USER)
 @RequiredArgsConstructor
 public class UserOrderController {
 

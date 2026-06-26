@@ -51,4 +51,11 @@ public class UserProfileController {
         userService.updatePassword(dto);
         return Result.ok();
     }
+
+    @Operation(summary = "解绑手机号")
+    @DeleteMapping("/phone")
+    public Result<Void> unbindPhone() {
+        userService.unbindPhone();
+        return Result.ok();
+    }
 }

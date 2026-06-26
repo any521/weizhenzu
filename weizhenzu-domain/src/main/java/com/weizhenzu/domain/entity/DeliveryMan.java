@@ -29,12 +29,13 @@ public class DeliveryMan implements Serializable {
     private Long id;
 
     private String phone;
-
     private String phoneHash;
-
+    private String email;
     private String password;
 
     private String name;
+
+    private String vehicleNo;
 
     private String avatar;
 

@@ -54,11 +54,11 @@ public class AlipayStrategy implements PaymentStrategy {
             }
             request.setBizModel(model);
 
-            // WAP 支付返回完整的跳转 URL（GET 方式）
-            String payUrl = alipayClient.pageExecute(request, "GET").getBody();
+            // WAP 支付：使用 POST 方式返回自动提交的表单 HTML（沙箱和正式环境均兼容）
+            String payForm = alipayClient.pageExecute(request, "POST").getBody();
             PaymentResult r = new PaymentResult();
             r.setSuccess(true);
-            r.setPayUrl(payUrl);
+            r.setPayUrl(payForm);
             return r;
         } catch (Exception e) {
             log.error("[支付宝] 下单失败: paymentNo={}", req.getPaymentNo(), e);

@@ -27,6 +27,13 @@ public enum ResultCode {
     PHONE_FORMAT_ERROR(10003, "手机号格式错误"),
     SMS_CODE_ERROR(10004, "验证码错误或已过期"),
     SMS_CODE_FREQUENT(10005, "验证码发送过于频繁"),
+    EMAIL_FORMAT_ERROR(10006, "邮箱格式错误"),
+    EMAIL_NOT_FOUND(10007, "该邮箱尚未注册"),
+    EMAIL_EXISTS(10008, "该邮箱已被注册"),
+    PHONE_NOT_BOUND(10009, "尚未绑定手机号"),
+    PHONE_ALREADY_BOUND(10010, "该手机号已被其他账号绑定"),
+    EMAIL_SEND_FAIL(10011, "邮件发送失败，请稍后重试"),
+    ACCOUNT_AUDITING(10012, "账号审核中，请耐心等待"),
 
     // 商家业务 2xxxx
     MERCHANT_NOT_FOUND(20001, "商家不存在"),

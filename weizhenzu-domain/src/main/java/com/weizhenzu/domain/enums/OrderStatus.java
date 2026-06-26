@@ -49,7 +49,7 @@ public enum OrderStatus {
         return switch (this) {
             case PENDING_PAY -> EnumSet.of(PAID, CANCELED);
             case PAID -> EnumSet.of(MERCHANT_ACCEPTED, CANCELED, REFUNDING);
-            case MERCHANT_ACCEPTED -> EnumSet.of(RIDER_TAKEN, CANCELED, REFUNDING);
+            case MERCHANT_ACCEPTED -> EnumSet.of(RIDER_TAKEN, CANCELED, REFUNDING, DELIVERED);
             case RIDER_TAKEN -> EnumSet.of(PICKED_UP, CANCELED);
             case PICKED_UP -> EnumSet.of(DELIVERING);
             case DELIVERING -> EnumSet.of(DELIVERED);

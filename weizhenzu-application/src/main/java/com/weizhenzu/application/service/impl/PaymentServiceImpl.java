@@ -6,6 +6,7 @@ import com.weizhenzu.common.context.UserContext;
 import com.weizhenzu.common.exception.BizException;
 import com.weizhenzu.common.result.ResultCode;
 import com.weizhenzu.common.utils.OrderNoGenerator;
+import com.weizhenzu.domain.dto.OrderNotifyMessage;
 import com.weizhenzu.domain.dto.PayDTO;
 import com.weizhenzu.domain.dto.RefundApplyDTO;
 import com.weizhenzu.domain.entity.Order;
@@ -13,16 +14,19 @@ import com.weizhenzu.domain.entity.Payment;
 import com.weizhenzu.domain.entity.PaymentLog;
 import com.weizhenzu.domain.entity.Refund;
 import com.weizhenzu.domain.entity.RefundLog;
+import com.weizhenzu.domain.entity.User;
 import com.weizhenzu.domain.enums.OrderStatus;
 import com.weizhenzu.domain.enums.PaymentStatus;
 import com.weizhenzu.domain.enums.RefundStatus;
 import com.weizhenzu.domain.vo.PaymentVO;
 import com.weizhenzu.domain.vo.RefundVO;
+import com.weizhenzu.infrastructure.mq.OrderNotifyProducer;
 import com.weizhenzu.infrastructure.persistence.mapper.OrderMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.PaymentLogMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.PaymentMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.RefundLogMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.RefundMapper;
+import com.weizhenzu.infrastructure.persistence.mapper.UserMapper;
 import com.weizhenzu.infrastructure.thirdparty.payment.PaymentRequest;
 import com.weizhenzu.infrastructure.thirdparty.payment.PaymentResult;
 import com.weizhenzu.infrastructure.thirdparty.payment.PaymentStrategy;
@@ -33,6 +37,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -53,7 +59,9 @@ public class PaymentServiceImpl implements PaymentService {
     private final OrderMapper orderMapper;
     private final RefundMapper refundMapper;
     private final RefundLogMapper refundLogMapper;
+    private final UserMapper userMapper;
     private final PaymentStrategyFactory strategyFactory;
+    private final OrderNotifyProducer orderNotifyProducer;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -76,7 +84,7 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setAmount(order.getPayAmount());
         payment.setPayType(dto.getPayType());
         payment.setStatus(PaymentStatus.PENDING.getCode());
-        payment.setExpireTime(LocalDateTime.now().plusMinutes(15));
+        payment.setExpireTime(LocalDateTime.now().plusMinutes(30));
         paymentMapper.insert(payment);
 
         // 调用支付策略
@@ -105,7 +113,61 @@ public class PaymentServiceImpl implements PaymentService {
         order.setPayType(dto.getPayType());
         orderMapper.updateById(order);
 
+        // 余额支付：即时扣减余额并标记支付成功
+        if (dto.getPayType() == 3 && Boolean.TRUE.equals(result.getPaid())) {
+            processBalancePayment(payment, order, userId);
+        }
+
         return toVO(payment);
+    }
+
+    /**
+     * 处理余额支付：扣减用户余额，更新支付单和订单状态
+     */
+    private void processBalancePayment(Payment payment, Order order, Long userId) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BizException(ResultCode.PARAM_ERROR, "用户不存在");
+        }
+        if (user.getBalance() == null || user.getBalance().compareTo(payment.getAmount()) < 0) {
+            throw new BizException(ResultCode.PAY_ERROR, "余额不足");
+        }
+        // 扣减余额
+        user.setBalance(user.getBalance().subtract(payment.getAmount()));
+        userMapper.updateById(user);
+
+        // 标记支付成功（乐观锁：仅当状态为PENDING时更新，防止并发重复处理）
+        int payRows = paymentMapper.updateStatus(payment.getId(),
+                PaymentStatus.SUCCESS.getCode(), "BALANCE_" + payment.getPaymentNo(),
+                PaymentStatus.PENDING.getCode());
+
+        // 更新订单状态
+        boolean orderPaid = false;
+        if (payRows > 0 && order.getStatus() == OrderStatus.PENDING_PAY.getCode()) {
+            int orderRows = orderMapper.updateStatus(order.getId(),
+                    OrderStatus.PENDING_PAY.getCode(), OrderStatus.PAID.getCode());
+            if (orderRows > 0) {
+                orderMapper.updatePayStatus(order.getId(), 1);
+                orderPaid = true;
+            }
+        }
+
+        saveLog(payment.getId(), payment.getPaymentNo(), "BALANCE_PAY",
+                "余额支付扣减: " + payment.getAmount(), "success", 1);
+        log.info("[余额支付] 支付成功: paymentNo={}, userId={}, amount={}",
+                payment.getPaymentNo(), userId, payment.getAmount());
+
+        // 事务提交后发送MQ通知商家
+        if (orderPaid) {
+            final Order orderRef = order;
+            final Payment paymentRef = payment;
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    sendNewOrderNotify(orderRef, paymentRef);
+                }
+            });
+        }
     }
 
     @Override
@@ -115,6 +177,12 @@ public class PaymentServiceImpl implements PaymentService {
             throw new BizException(ResultCode.ORDER_NOT_FOUND);
         }
         Payment payment = getLatestPaymentByOrderId(orderId);
+        return toVO(payment);
+    }
+
+    @Override
+    public PaymentVO queryPaymentByNo(String paymentNo) {
+        Payment payment = getPaymentByNo(paymentNo);
         return toVO(payment);
     }
 
@@ -129,6 +197,23 @@ public class PaymentServiceImpl implements PaymentService {
         if (payment.getStatus() == PaymentStatus.SUCCESS.getCode()) {
             return toVO(payment);
         }
+        return syncPaymentStatus(payment);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PaymentVO queryPaymentStatusByNo(String paymentNo) {
+        Payment payment = getPaymentByNo(paymentNo);
+        if (payment.getStatus() == PaymentStatus.SUCCESS.getCode()) {
+            return toVO(payment);
+        }
+        return syncPaymentStatus(payment);
+    }
+
+    /**
+     * 主动同步支付状态（调用第三方查询并更新本地状态）
+     */
+    private PaymentVO syncPaymentStatus(Payment payment) {
         // 调用第三方主动查询
         PaymentStrategy strategy = strategyFactory.get(payment.getPayType());
         PaymentResult result = strategy.queryPayment(payment.getPaymentNo());
@@ -140,6 +225,12 @@ public class PaymentServiceImpl implements PaymentService {
             payment = paymentMapper.selectById(payment.getId());
         }
         return toVO(payment);
+    }
+
+    @Override
+    public void closePaymentByNo(String paymentNo) {
+        Payment payment = getPaymentByNo(paymentNo);
+        closePayment(payment.getId());
     }
 
     @Override
@@ -159,23 +250,51 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         if (success) {
-            paymentMapper.updateStatus(payment.getId(),
-                    PaymentStatus.SUCCESS.getCode(), thirdPartyNo);
+            // 更新支付单状态为成功（乐观锁：仅当状态为PENDING时更新，防止并发回调重复处理）
+            int payRows = paymentMapper.updateStatus(payment.getId(),
+                    PaymentStatus.SUCCESS.getCode(), thirdPartyNo,
+                    PaymentStatus.PENDING.getCode());
 
+            // 更新订单状态
             Order order = orderMapper.selectById(payment.getOrderId());
-            if (order != null && order.getStatus() == OrderStatus.PENDING_PAY.getCode()) {
-                orderMapper.updateStatus(order.getId(),
+            boolean orderPaid = false;
+            if (payRows > 0 && order != null && order.getStatus() == OrderStatus.PENDING_PAY.getCode()) {
+                // 使用乐观锁更新订单状态：待付款 -> 待接单
+                int orderRows = orderMapper.updateStatus(order.getId(),
                         OrderStatus.PENDING_PAY.getCode(), OrderStatus.PAID.getCode());
-                orderMapper.updatePayStatus(order.getId(), 1);
-                order.setPayTime(LocalDateTime.now());
-                orderMapper.updateById(order);
+                if (orderRows > 0) {
+                    orderMapper.updatePayStatus(order.getId(), 1);
+                    orderPaid = true;
+                    log.info("[支付回调] 订单支付成功: orderId={}, paymentNo={}, payType={}",
+                            order.getId(), paymentNo, payment.getPayType());
+                }
+            } else if (order != null) {
+                // 订单状态不是待付款（可能已经被取消或其他），仅记录日志
+                log.warn("[支付回调] 订单状态异常，不更新状态: orderId={}, status={}, paymentNo={}",
+                        order.getId(), order.getStatus(), paymentNo);
+                // 仍需确保支付状态为已支付
+                if (order.getPayStatus() == null || order.getPayStatus() != 1) {
+                    orderMapper.updatePayStatus(order.getId(), 1);
+                }
+            }
+
+            // 事务提交后发送MQ通知商家（避免事务回滚导致消息误发）
+            if (orderPaid && order != null) {
+                final Order orderRef = order;
+                final Payment paymentRef = payment;
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        sendNewOrderNotify(orderRef, paymentRef);
+                    }
+                });
             }
 
             saveLog(payment.getId(), paymentNo, "CALLBACK",
                     "thirdPartyNo=" + thirdPartyNo, "success", 1);
             return "success";
         } else {
-            paymentMapper.updateStatus(payment.getId(),
+            paymentMapper.updateStatusForce(payment.getId(),
                     PaymentStatus.FAIL.getCode(), thirdPartyNo);
             saveLog(payment.getId(), paymentNo, "CALLBACK",
                     "thirdPartyNo=" + thirdPartyNo, "fail", 0);
@@ -256,7 +375,8 @@ public class PaymentServiceImpl implements PaymentService {
             throw new BizException(ResultCode.PAY_ERROR, "支付单状态不允许关闭");
         }
         paymentMapper.updateStatus(payment.getId(),
-                PaymentStatus.CLOSED.getCode(), payment.getThirdPartyNo());
+                PaymentStatus.CLOSED.getCode(), payment.getThirdPartyNo(),
+                PaymentStatus.PENDING.getCode());
         saveLog(payment.getId(), payment.getPaymentNo(), "CLOSE",
                 "手动关闭", "closed", 1);
     }
@@ -266,6 +386,17 @@ public class PaymentServiceImpl implements PaymentService {
                 new LambdaQueryWrapper<Payment>()
                         .eq(Payment::getOrderId, orderId)
                         .orderByDesc(Payment::getCreatedAt)
+                        .last("LIMIT 1"));
+        if (payment == null) {
+            throw new BizException(ResultCode.NOT_FOUND, "支付单不存在");
+        }
+        return payment;
+    }
+
+    private Payment getPaymentByNo(String paymentNo) {
+        Payment payment = paymentMapper.selectOne(
+                new LambdaQueryWrapper<Payment>()
+                        .eq(Payment::getPaymentNo, paymentNo)
                         .last("LIMIT 1"));
         if (payment == null) {
             throw new BizException(ResultCode.NOT_FOUND, "支付单不存在");
@@ -283,6 +414,34 @@ public class PaymentServiceImpl implements PaymentService {
         log.setResponse(response);
         log.setStatus(status);
         paymentLogMapper.insert(log);
+    }
+
+    /**
+     * 发送新订单通知到MQ（事务提交后调用）
+     * msgId使用确定性格式：orderId:type，确保同一事件重复生产时可被幂等去重
+     */
+    private void sendNewOrderNotify(Order order, Payment payment) {
+        try {
+            String msgId = order.getId() + ":NEW_ORDER:merchant";
+            OrderNotifyMessage msg = OrderNotifyMessage.builder()
+                    .msgId(msgId)
+                    .orderId(order.getId())
+                    .orderNo(order.getOrderNo())
+                    .merchantId(order.getMerchantId())
+                    .userId(order.getUserId())
+                    .amount(payment.getAmount())
+                    .payType(payment.getPayType())
+                    .fromStatus(OrderStatus.PENDING_PAY.getCode())
+                    .toStatus(OrderStatus.PAID.getCode())
+                    .operatorType(1)
+                    .operatorId(order.getUserId())
+                    .eventTime(LocalDateTime.now())
+                    .content("您有新订单，请及时处理")
+                    .build();
+            orderNotifyProducer.sendNewOrderToMerchant(msg);
+        } catch (Exception e) {
+            log.error("[支付回调] 发送新订单通知失败: orderNo={}", order.getOrderNo(), e);
+        }
     }
 
     private void saveRefundLog(Long refundId, String refundNo, String event,

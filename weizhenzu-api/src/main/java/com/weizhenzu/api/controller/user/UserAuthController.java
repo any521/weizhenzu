@@ -2,6 +2,10 @@ package com.weizhenzu.api.controller.user;
 
 import com.weizhenzu.application.service.AuthService;
 import com.weizhenzu.common.result.Result;
+import com.weizhenzu.domain.dto.BindPhoneDTO;
+import com.weizhenzu.domain.dto.EmailCodeDTO;
+import com.weizhenzu.domain.dto.EmailLoginDTO;
+import com.weizhenzu.domain.dto.EmailRegisterDTO;
 import com.weizhenzu.domain.dto.PasswordLoginDTO;
 import com.weizhenzu.domain.dto.RefreshTokenDTO;
 import com.weizhenzu.domain.dto.SmsCodeDTO;
@@ -35,10 +39,24 @@ public class UserAuthController {
         return Result.ok();
     }
 
-    @Operation(summary = "用户注册")
+    @Operation(summary = "发送邮箱验证码（真实 SMTP 发送）")
+    @PostMapping("/email-code")
+    public Result<Void> sendEmailCode(@Valid @RequestBody EmailCodeDTO dto) {
+        dto.setUserType(1);
+        authService.sendEmailCode(dto);
+        return Result.ok();
+    }
+
+    @Operation(summary = "用户注册（短信验证码）")
     @PostMapping("/register")
     public Result<Long> register(@Valid @RequestBody UserRegisterDTO dto) {
         return Result.ok(authService.registerUser(dto));
+    }
+
+    @Operation(summary = "用户注册（邮箱验证码）")
+    @PostMapping("/register/email")
+    public Result<Long> registerByEmail(@Valid @RequestBody EmailRegisterDTO dto) {
+        return Result.ok(authService.registerUserByEmail(dto));
     }
 
     @Operation(summary = "短信验证码登录")
@@ -46,6 +64,13 @@ public class UserAuthController {
     public Result<LoginVO> smsLogin(@Valid @RequestBody SmsLoginDTO dto) {
         dto.setUserType(1);
         return Result.ok(authService.smsLogin(dto));
+    }
+
+    @Operation(summary = "邮箱验证码登录")
+    @PostMapping("/login/email")
+    public Result<LoginVO> emailLogin(@Valid @RequestBody EmailLoginDTO dto) {
+        dto.setUserType(1);
+        return Result.ok(authService.emailLogin(dto));
     }
 
     @Operation(summary = "密码登录")
@@ -65,6 +90,13 @@ public class UserAuthController {
     @PostMapping("/logout")
     public Result<Void> logout() {
         authService.logout();
+        return Result.ok();
+    }
+
+    @Operation(summary = "绑定手机号（下单前必须绑定）")
+    @PostMapping("/bind-phone")
+    public Result<Void> bindPhone(@Valid @RequestBody BindPhoneDTO dto) {
+        authService.bindPhone(dto);
         return Result.ok();
     }
 }

@@ -30,4 +30,19 @@ public interface OrderMapper extends BaseMapper<Order> {
     @Update("UPDATE t_order SET pay_status = #{payStatus}, pay_time = NOW(), " +
             "version = version + 1, updated_at = NOW() WHERE id = #{orderId} AND deleted = 0")
     int updatePayStatus(@Param("orderId") Long orderId, @Param("payStatus") Integer payStatus);
+
+    /**
+     * 更新取消信息
+     */
+    @Update("UPDATE t_order SET cancel_time = NOW(), cancel_reason = #{reason}, " +
+            "updated_at = NOW() WHERE id = #{orderId} AND deleted = 0")
+    int updateCancelInfo(@Param("orderId") Long orderId, @Param("reason") String reason);
+
+    /**
+     * 批量取消超时未支付订单（状态为待付款且创建时间超过指定分钟数）
+     */
+    @Update("UPDATE t_order SET status = 8, cancel_time = NOW(), cancel_reason = '超时未支付自动取消', " +
+            "version = version + 1, updated_at = NOW() " +
+            "WHERE status = 0 AND deleted = 0 AND created_at < DATE_SUB(NOW(), INTERVAL #{minutes} MINUTE)")
+    int cancelTimeoutOrders(@Param("minutes") int minutes);
 }

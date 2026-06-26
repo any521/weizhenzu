@@ -27,6 +27,12 @@ public class UserVO implements Serializable {
     @Schema(description = "手机号（脱敏）")
     private String phone;
 
+    @Schema(description = "邮箱（脱敏）")
+    private String email;
+
+    @Schema(description = "是否已绑定手机号：true已绑定 false未绑定")
+    private Boolean phoneBound;
+
     @Schema(description = "用户名")
     private String username;
 

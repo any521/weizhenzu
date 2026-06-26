@@ -2,8 +2,12 @@ package com.weizhenzu.api.controller.rider;
 
 import com.weizhenzu.application.service.AuthService;
 import com.weizhenzu.common.result.Result;
+import com.weizhenzu.domain.dto.BindPhoneDTO;
+import com.weizhenzu.domain.dto.EmailCodeDTO;
+import com.weizhenzu.domain.dto.EmailLoginDTO;
 import com.weizhenzu.domain.dto.PasswordLoginDTO;
 import com.weizhenzu.domain.dto.RefreshTokenDTO;
+import com.weizhenzu.domain.dto.RiderEmailRegisterDTO;
 import com.weizhenzu.domain.dto.RiderRegisterDTO;
 import com.weizhenzu.domain.dto.SmsCodeDTO;
 import com.weizhenzu.domain.dto.SmsLoginDTO;
@@ -35,10 +39,24 @@ public class RiderAuthController {
         return Result.ok();
     }
 
-    @Operation(summary = "骑手注册")
+    @Operation(summary = "发送邮箱验证码（真实 SMTP 发送）")
+    @PostMapping("/email-code")
+    public Result<Void> sendEmailCode(@Valid @RequestBody EmailCodeDTO dto) {
+        dto.setUserType(3);
+        authService.sendEmailCode(dto);
+        return Result.ok();
+    }
+
+    @Operation(summary = "骑手注册（短信验证码）")
     @PostMapping("/register")
     public Result<Long> register(@Valid @RequestBody RiderRegisterDTO dto) {
         return Result.ok(authService.registerRider(dto));
+    }
+
+    @Operation(summary = "骑手注册（邮箱验证码）")
+    @PostMapping("/register/email")
+    public Result<Long> registerByEmail(@Valid @RequestBody RiderEmailRegisterDTO dto) {
+        return Result.ok(authService.registerRiderByEmail(dto));
     }
 
     @Operation(summary = "短信验证码登录")
@@ -46,6 +64,13 @@ public class RiderAuthController {
     public Result<LoginVO> smsLogin(@Valid @RequestBody SmsLoginDTO dto) {
         dto.setUserType(3);
         return Result.ok(authService.smsLogin(dto));
+    }
+
+    @Operation(summary = "邮箱验证码登录")
+    @PostMapping("/login/email")
+    public Result<LoginVO> emailLogin(@Valid @RequestBody EmailLoginDTO dto) {
+        dto.setUserType(3);
+        return Result.ok(authService.emailLogin(dto));
     }
 
     @Operation(summary = "密码登录")
@@ -65,6 +90,13 @@ public class RiderAuthController {
     @PostMapping("/logout")
     public Result<Void> logout() {
         authService.logout();
+        return Result.ok();
+    }
+
+    @Operation(summary = "绑定手机号（接单前必须绑定）")
+    @PostMapping("/bind-phone")
+    public Result<Void> bindPhone(@Valid @RequestBody BindPhoneDTO dto) {
+        authService.bindPhone(dto);
         return Result.ok();
     }
 }

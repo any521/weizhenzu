@@ -84,6 +84,11 @@ public class Order implements Serializable {
 
     private LocalDateTime expectedTime;
 
+    /**
+     * 用餐类型：1=堂食，2=外卖，默认2（外卖）
+     */
+    private Integer diningType;
+
     private Integer isRated;
 
     private Integer source;

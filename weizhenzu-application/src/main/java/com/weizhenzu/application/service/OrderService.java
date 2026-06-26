@@ -89,4 +89,18 @@ public interface OrderService {
      * 配送跟踪
      */
     DeliveryTrackingVO tracking(Long orderId);
+
+    /**
+     * 骑手发送留言
+     * @param taskId 配送任务ID
+     * @param content 留言内容
+     */
+    void riderSendMessage(Long taskId, String content);
+
+    /**
+     * 自动取消超时未支付的订单（定时任务调用）
+     * @param timeoutMinutes 超时分钟数
+     * @return 取消的订单数量
+     */
+    int autoCancelTimeoutOrders(int timeoutMinutes);
 }

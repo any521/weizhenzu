@@ -41,6 +41,9 @@ public class OrderCreateDTO implements Serializable {
     @Schema(description = "备注")
     private String remark;
 
+    @Schema(description = "用餐类型：1=堂食，2=外卖，默认外卖")
+    private Integer diningType;
+
     @Schema(description = "幂等令牌（防重复下单）")
     @NotEmpty(message = "clientToken不能为空")
     private String clientToken;

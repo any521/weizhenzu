@@ -26,6 +26,15 @@ public class OrderListItemVO implements Serializable {
     @Schema(description = "订单号")
     private String orderNo;
 
+    @Schema(description = "用户ID")
+    private Long userId;
+
+    @Schema(description = "用户昵称")
+    private String userName;
+
+    @Schema(description = "用户手机号")
+    private String userPhone;
+
     @Schema(description = "商家ID")
     private Long merchantId;
 

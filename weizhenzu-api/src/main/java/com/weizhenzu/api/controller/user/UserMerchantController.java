@@ -36,8 +36,9 @@ public class UserMerchantController {
             @RequestParam(defaultValue = "1") Integer current,
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) Long categoryId,
-            @RequestParam(required = false) String keyword) {
-        return Result.ok(merchantService.userPage(current, size, categoryId, keyword));
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer deliveryType) {
+        return Result.ok(merchantService.userPage(current, size, categoryId, keyword, deliveryType));
     }
 
     @Operation(summary = "商家分类列表")

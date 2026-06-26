@@ -34,8 +34,14 @@ public interface MerchantService {
 
     /**
      * 商家列表（C端）
+     *
+     * @param current      当前页
+     * @param size         每页大小
+     * @param categoryId   分类ID
+     * @param keyword      搜索关键词
+     * @param deliveryType 配送类型：1=外卖，2=自取，null=全部
      */
-    PageResult<MerchantVO> userPage(Integer current, Integer size, Long categoryId, String keyword);
+    PageResult<MerchantVO> userPage(Integer current, Integer size, Long categoryId, String keyword, Integer deliveryType);
 
     /**
      * 商家菜单（C端）
@@ -52,6 +58,8 @@ public interface MerchantService {
      *
      * @param name            店铺名称
      * @param logo            店铺Logo
+     * @param contactPerson   联系人
+     * @param phone           联系电话
      * @param description     简介
      * @param notice          公告
      * @param openTime        营业时间
@@ -60,10 +68,13 @@ public interface MerchantService {
      * @param deliveryFee     配送费
      * @param packingFee      打包费
      * @param deliveryRadius  配送半径
+     * @param supportDelivery 是否支持外卖
+     * @param supportPickup   是否支持自取
      */
-    void updateSettings(String name, String logo, String description, String notice,
+    void updateSettings(String name, String logo, String contactPerson, String phone, String description, String notice,
                         String openTime, Integer isOpen, BigDecimal minOrderAmount,
-                        BigDecimal deliveryFee, BigDecimal packingFee, Integer deliveryRadius);
+                        BigDecimal deliveryFee, BigDecimal packingFee, Integer deliveryRadius,
+                        Integer supportDelivery, Integer supportPickup);
 
     /**
      * 商家财务统计

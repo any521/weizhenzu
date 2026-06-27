@@ -5,6 +5,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * Mock 微信支付策略（毕业设计模拟实现）
+ * - 非真实微信支付，模拟支付流程
+ * - queryPayment 始终返回支付成功（前端有1.5秒loading+轮询间隔模拟等待）
  *
  * @author weizhenzu
  * @since 1.0.0
@@ -25,6 +27,7 @@ public class MockWechatStrategy implements PaymentStrategy {
         r.setSuccess(true);
         r.setPayUrl("about:blank");
         r.setMock(true);
+        r.setThirdPartyNo("WX" + System.currentTimeMillis());
         return r;
     }
 
@@ -35,6 +38,7 @@ public class MockWechatStrategy implements PaymentStrategy {
         r.setSuccess(true);
         r.setPaid(true);
         r.setMock(true);
+        r.setThirdPartyNo("MOCKWX" + paymentNo);
         return r;
     }
 
@@ -44,6 +48,7 @@ public class MockWechatStrategy implements PaymentStrategy {
         RefundResult r = new RefundResult();
         r.setSuccess(true);
         r.setMock(true);
+        r.setThirdPartyNo("MOCKWXRF" + System.currentTimeMillis());
         return r;
     }
 }

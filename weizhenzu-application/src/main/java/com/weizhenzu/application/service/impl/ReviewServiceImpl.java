@@ -7,18 +7,22 @@ import com.weizhenzu.common.context.UserContext;
 import com.weizhenzu.common.exception.BizException;
 import com.weizhenzu.common.result.PageResult;
 import com.weizhenzu.common.result.ResultCode;
+import com.weizhenzu.domain.dto.OrderNotifyMessage;
 import com.weizhenzu.domain.dto.ReviewCreateDTO;
 import com.weizhenzu.domain.entity.DeliveryMan;
 import com.weizhenzu.domain.entity.Merchant;
 import com.weizhenzu.domain.entity.Order;
+import com.weizhenzu.domain.entity.OrderItem;
 import com.weizhenzu.domain.entity.Review;
 import com.weizhenzu.domain.entity.User;
 import com.weizhenzu.domain.vo.ReviewVO;
 import com.weizhenzu.infrastructure.persistence.mapper.MerchantMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.DeliveryManMapper;
+import com.weizhenzu.infrastructure.persistence.mapper.OrderItemMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.OrderMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.ReviewMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.UserMapper;
+import com.weizhenzu.infrastructure.mq.OrderNotifyProducer;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -44,10 +48,12 @@ public class ReviewServiceImpl implements ReviewService {
 
     private final ReviewMapper reviewMapper;
     private final OrderMapper orderMapper;
+    private final OrderItemMapper orderItemMapper;
     private final UserMapper userMapper;
     private final MerchantMapper merchantMapper;
     private final DeliveryManMapper deliveryManMapper;
     private final ObjectMapper objectMapper;
+    private final OrderNotifyProducer orderNotifyProducer;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -216,6 +222,25 @@ public class ReviewServiceImpl implements ReviewService {
         r.setMerchantReply(content);
         r.setMerchantReplyTime(LocalDateTime.now());
         reviewMapper.updateById(r);
+
+        // 商家回复后，通过 WebSocket 推送通知给评价对应的用户
+        try {
+            OrderNotifyMessage msg = OrderNotifyMessage.builder()
+                    .msgId(r.getOrderId() + ":REVIEW_REPLY:" + System.currentTimeMillis())
+                    .orderId(r.getOrderId())
+                    .orderNo(r.getOrderNo())
+                    .userId(r.getUserId())
+                    .merchantId(r.getMerchantId())
+                    .type("REVIEW_REPLY")
+                    .content("商家已回复您的评价：" + (content.length() > 30 ? content.substring(0, 30) + "..." : content))
+                    .operatorType(2)
+                    .operatorId(merchantId)
+                    .eventTime(LocalDateTime.now())
+                    .build();
+            orderNotifyProducer.sendOrderStatusToUser(msg);
+        } catch (Exception e) {
+            log.error("[评价回复] 推送通知失败: reviewId={}, orderId={}", id, r.getOrderId(), e);
+        }
     }
 
     @Override
@@ -248,19 +273,57 @@ public class ReviewServiceImpl implements ReviewService {
         vo.setTags(parseJsonList(r.getTags()));
         vo.setAnonymous(r.getAnonymous());
         vo.setMerchantReply(r.getMerchantReply());
+        vo.setReply(r.getMerchantReply());
         vo.setMerchantReplyTime(r.getMerchantReplyTime());
+        vo.setStatus(r.getStatus());
         vo.setCreatedAt(r.getCreatedAt());
 
+        // 初始化默认值
+        vo.setDishNames(Collections.emptyList());
+        vo.setMerchantName("未知商家");
+        vo.setDeliveryManName("平台配送");
+
         // 用户信息（匿名时隐藏）
-        if (r.getAnonymous() == null || r.getAnonymous() == 0) {
+        if (r.getAnonymous() != null && r.getAnonymous() == 1) {
+            vo.setUserNickname("匿名用户");
+        } else {
             User u = userMapper.selectById(r.getUserId());
             if (u != null) {
-                vo.setUserNickname(u.getNickname());
+                vo.setUserNickname(u.getNickname() != null ? u.getNickname() : (u.getUsername() != null ? u.getUsername() : "匿名用户"));
                 vo.setUserAvatar(u.getAvatar());
+            } else {
+                vo.setUserNickname("匿名用户");
             }
-        } else {
-            vo.setUserNickname("匿名用户");
         }
+
+        // 商家名称
+        if (r.getMerchantId() != null) {
+            Merchant m = merchantMapper.selectById(r.getMerchantId());
+            if (m != null && m.getName() != null) {
+                vo.setMerchantName(m.getName());
+            }
+        }
+
+        // 骑手名称
+        if (r.getDeliveryManId() != null) {
+            DeliveryMan dm = deliveryManMapper.selectById(r.getDeliveryManId());
+            if (dm != null && dm.getName() != null) {
+                vo.setDeliveryManName(dm.getName());
+            }
+        }
+
+        // 评价菜品名称列表
+        if (r.getOrderId() != null) {
+            List<OrderItem> items = orderItemMapper.selectList(
+                    new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, r.getOrderId()));
+            List<String> dishNames = items.stream()
+                    .map(OrderItem::getDishName)
+                    .filter(name -> name != null && !name.isEmpty())
+                    .distinct()
+                    .collect(Collectors.toList());
+            vo.setDishNames(dishNames);
+        }
+
         return vo;
     }
 

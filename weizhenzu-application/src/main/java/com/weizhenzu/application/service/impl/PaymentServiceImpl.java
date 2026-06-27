@@ -145,7 +145,7 @@ public class PaymentServiceImpl implements PaymentService {
         boolean orderPaid = false;
         if (payRows > 0 && order.getStatus() == OrderStatus.PENDING_PAY.getCode()) {
             int orderRows = orderMapper.updateStatus(order.getId(),
-                    OrderStatus.PENDING_PAY.getCode(), OrderStatus.PAID.getCode());
+                    OrderStatus.PENDING_PAY.getCode(), OrderStatus.PENDING_ACCEPT.getCode());
             if (orderRows > 0) {
                 orderMapper.updatePayStatus(order.getId(), 1);
                 orderPaid = true;
@@ -261,9 +261,14 @@ public class PaymentServiceImpl implements PaymentService {
             if (payRows > 0 && order != null && order.getStatus() == OrderStatus.PENDING_PAY.getCode()) {
                 // 使用乐观锁更新订单状态：待付款 -> 待接单
                 int orderRows = orderMapper.updateStatus(order.getId(),
-                        OrderStatus.PENDING_PAY.getCode(), OrderStatus.PAID.getCode());
+                        OrderStatus.PENDING_PAY.getCode(), OrderStatus.PENDING_ACCEPT.getCode());
                 if (orderRows > 0) {
                     orderMapper.updatePayStatus(order.getId(), 1);
+                    // 回写支付方式：确保 order.payType 与最终成功的 payment 一致，
+                    // 避免用户中途切换支付方式后 order.payType 与实际支付方式不符
+                    if (payment.getPayType() != null) {
+                        orderMapper.updatePayType(order.getId(), payment.getPayType());
+                    }
                     orderPaid = true;
                     log.info("[支付回调] 订单支付成功: orderId={}, paymentNo={}, payType={}",
                             order.getId(), paymentNo, payment.getPayType());
@@ -275,6 +280,10 @@ public class PaymentServiceImpl implements PaymentService {
                 // 仍需确保支付状态为已支付
                 if (order.getPayStatus() == null || order.getPayStatus() != 1) {
                     orderMapper.updatePayStatus(order.getId(), 1);
+                }
+                // 即使订单状态异常，也回写支付方式以保证准确性
+                if (payment.getPayType() != null) {
+                    orderMapper.updatePayType(order.getId(), payment.getPayType());
                 }
             }
 
@@ -432,7 +441,7 @@ public class PaymentServiceImpl implements PaymentService {
                     .amount(payment.getAmount())
                     .payType(payment.getPayType())
                     .fromStatus(OrderStatus.PENDING_PAY.getCode())
-                    .toStatus(OrderStatus.PAID.getCode())
+                    .toStatus(OrderStatus.PENDING_ACCEPT.getCode())
                     .operatorType(1)
                     .operatorId(order.getUserId())
                     .eventTime(LocalDateTime.now())

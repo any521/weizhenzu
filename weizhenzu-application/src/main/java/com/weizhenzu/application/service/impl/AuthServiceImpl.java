@@ -28,6 +28,7 @@ import com.weizhenzu.domain.vo.LoginVO;
 import com.weizhenzu.infrastructure.persistence.mapper.AdminMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.DeliveryManMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.MerchantMapper;
+import org.springframework.dao.DuplicateKeyException;
 import com.weizhenzu.infrastructure.persistence.mapper.UserMapper;
 import com.weizhenzu.infrastructure.security.JwtUtils;
 import io.jsonwebtoken.Claims;
@@ -37,6 +38,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.HashMap;
 
@@ -185,7 +187,23 @@ public class AuthServiceImpl implements AuthService {
             }
             case RIDER -> {
                 DeliveryMan r = deliveryManMapper.selectByEmail(dto.getEmail());
-                if (r == null) throw new BizException(ResultCode.EMAIL_NOT_FOUND, "该邮箱尚未注册骑手账号");
+                if (r == null) {
+                    // 自动注册骑手账号（和客户端用户端一致：邮箱验证码登录即注册）
+                    r = new DeliveryMan();
+                    r.setEmail(dto.getEmail());
+                    String emailPrefix = dto.getEmail().contains("@") ? dto.getEmail().substring(0, dto.getEmail().indexOf("@")) : dto.getEmail();
+                    r.setName("骑手" + emailPrefix);
+                    r.setStatus(1);
+                    r.setOnDuty(0);
+                    r.setLevel(1);
+                    r.setTotalOrders(0);
+                    r.setMonthOrders(0);
+                    r.setRating(BigDecimal.valueOf(5.0));
+                    r.setBalance(BigDecimal.ZERO);
+                    r.setLongitude(BigDecimal.ZERO);
+                    r.setLatitude(BigDecimal.ZERO);
+                    deliveryManMapper.insert(r);
+                }
                 if (r.getStatus() == 0) throw new BizException(ResultCode.ACCOUNT_AUDITING);
                 if (r.getStatus() != 1) throw new BizException(ResultCode.USER_DISABLED);
                 userId = r.getId();
@@ -210,10 +228,19 @@ public class AuthServiceImpl implements AuthService {
 
         switch (type) {
             case USER -> {
-                User user = userMapper.selectByPhoneHash(phoneHash);
-                // 未命中手机号且输入的是用户名，则按用户名查询
-                if (user == null && !PhoneUtils.isPhone(dto.getPhone())) {
-                    user = userMapper.selectByUsername(dto.getPhone());
+                String account = dto.getPhone();
+                User user = null;
+                // 1. 手机号查找
+                if (PhoneUtils.isPhone(account)) {
+                    user = userMapper.selectByPhoneHash(phoneHash);
+                }
+                // 2. 邮箱查找
+                if (user == null && account != null && account.contains("@")) {
+                    user = userMapper.selectByEmail(account.trim());
+                }
+                // 3. 用户名查找（非手机号、非邮箱格式则按用户名查）
+                if (user == null && !PhoneUtils.isPhone(account) && (account == null || !account.contains("@"))) {
+                    user = userMapper.selectByUsername(account);
                 }
                 if (user == null || user.getPassword() == null
                         || !passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
@@ -235,7 +262,20 @@ public class AuthServiceImpl implements AuthService {
                 avatar = m.getLogo();
             }
             case RIDER -> {
-                DeliveryMan r = deliveryManMapper.selectByPhoneHash(phoneHash);
+                String account = dto.getPhone();
+                DeliveryMan r = null;
+                // 先尝试手机号hash查找
+                if (PhoneUtils.isPhone(account)) {
+                    r = deliveryManMapper.selectByPhoneHash(phoneHash);
+                }
+                // 手机号未命中，尝试邮箱查找
+                if (r == null && account != null && account.contains("@")) {
+                    r = deliveryManMapper.selectByEmail(account.trim());
+                }
+                // 最后再用手机号hash兜底（非手机号格式的字符串也尝试hash查找，兼容历史数据）
+                if (r == null && !PhoneUtils.isPhone(account) && (account == null || !account.contains("@"))) {
+                    r = deliveryManMapper.selectByPhoneHash(phoneHash);
+                }
                 if (r == null || r.getPassword() == null
                         || !passwordEncoder.matches(dto.getPassword(), r.getPassword())) {
                     throw new BizException(ResultCode.USER_NOT_FOUND, "账号或密码错误");
@@ -444,18 +484,24 @@ public class AuthServiceImpl implements AuthService {
         }
 
         // 4. 绑定手机号
-        if (userType == UserTypeEnum.USER.getCode()) {
-            User update = new User();
-            update.setId(userId);
-            update.setPhone(PhoneUtils.encrypt(dto.getPhone()));
-            update.setPhoneHash(phoneHash);
-            userMapper.updateById(update);
-        } else if (userType == UserTypeEnum.RIDER.getCode()) {
-            DeliveryMan update = new DeliveryMan();
-            update.setId(userId);
-            update.setPhone(PhoneUtils.encrypt(dto.getPhone()));
-            update.setPhoneHash(phoneHash);
-            deliveryManMapper.updateById(update);
+        try {
+            if (userType == UserTypeEnum.USER.getCode()) {
+                User update = new User();
+                update.setId(userId);
+                update.setPhone(PhoneUtils.encrypt(dto.getPhone()));
+                update.setPhoneHash(phoneHash);
+                userMapper.updateById(update);
+            } else if (userType == UserTypeEnum.RIDER.getCode()) {
+                DeliveryMan update = new DeliveryMan();
+                update.setId(userId);
+                update.setPhone(PhoneUtils.encrypt(dto.getPhone()));
+                update.setPhoneHash(phoneHash);
+                deliveryManMapper.updateById(update);
+            }
+        } catch (DuplicateKeyException e) {
+            log.warn("[绑定手机号] 手机号已被其他账号绑定: phone={}, userId={}, userType={}",
+                    PhoneUtils.mask(dto.getPhone()), userId, userType);
+            throw new BizException(ResultCode.PHONE_ALREADY_BOUND);
         }
         log.info("[绑定手机号] userId={}, userType={}, phone={}", userId, userType, PhoneUtils.mask(dto.getPhone()));
     }

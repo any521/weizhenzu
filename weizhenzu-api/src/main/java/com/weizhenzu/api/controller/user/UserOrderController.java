@@ -8,8 +8,10 @@ import com.weizhenzu.common.result.PageResult;
 import com.weizhenzu.common.result.Result;
 import com.weizhenzu.domain.dto.OrderCancelDTO;
 import com.weizhenzu.domain.dto.OrderCreateDTO;
+import com.weizhenzu.domain.dto.OrderPreviewDTO;
 import com.weizhenzu.domain.vo.DeliveryTrackingVO;
 import com.weizhenzu.domain.vo.OrderCreateVO;
+import com.weizhenzu.domain.vo.OrderPreviewVO;
 import com.weizhenzu.domain.vo.OrderVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -37,6 +39,12 @@ public class UserOrderController {
     @PostMapping
     public Result<OrderCreateVO> create(@Valid @RequestBody OrderCreateDTO dto) {
         return Result.ok(orderService.createOrder(dto));
+    }
+
+    @Operation(summary = "订单预览（按地址计算真实金额，不创建订单）")
+    @PostMapping("/preview")
+    public Result<OrderPreviewVO> preview(@Valid @RequestBody OrderPreviewDTO dto) {
+        return Result.ok(orderService.previewOrder(dto));
     }
 
     @Operation(summary = "我的订单列表")

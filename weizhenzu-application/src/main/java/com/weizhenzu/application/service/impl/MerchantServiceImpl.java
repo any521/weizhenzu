@@ -22,12 +22,14 @@ import com.weizhenzu.infrastructure.persistence.mapper.DishMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.MerchantCategoryMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.MerchantMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.OrderMapper;
+import com.weizhenzu.infrastructure.thirdparty.storage.StorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
- import java.math.BigDecimal;
+import java.math.BigDecimal;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -47,6 +49,10 @@ public class MerchantServiceImpl implements MerchantService {
     private final MerchantCategoryMapper merchantCategoryMapper;
     private final OrderMapper orderMapper;
     private final PasswordEncoder passwordEncoder;
+    private final StorageService storageService;
+
+    /** 地球半径（公里） */
+    private static final double EARTH_RADIUS_KM = 6371.0;
 
     @Override
     public Long register(MerchantRegisterDTO dto) {
@@ -80,22 +86,31 @@ public class MerchantServiceImpl implements MerchantService {
     }
 
     @Override
-    public MerchantVO detail(Long id) {
+    public MerchantVO detail(Long id, BigDecimal lng, BigDecimal lat) {
         Merchant m = merchantMapper.selectByIdRaw(id);
         if (m == null) {
             throw new BizException(ResultCode.MERCHANT_NOT_FOUND);
         }
-        return toVO(m);
+        MerchantVO vo = toVO(m);
+        // 如果传入了用户坐标，计算距离
+        if (lng != null && lat != null && m.getLongitude() != null && m.getLatitude() != null) {
+            int distance = calculateDistance(
+                    lng.doubleValue(), lat.doubleValue(),
+                    m.getLongitude().doubleValue(), m.getLatitude().doubleValue());
+            vo.setDistance(distance);
+        }
+        return vo;
     }
 
     @Override
     public MerchantVO current() {
         Long id = UserContext.getUserId();
-        return detail(id);
+        return detail(id, null, null);
     }
 
     @Override
-    public PageResult<MerchantVO> userPage(Integer current, Integer size, Long categoryId, String keyword, Integer deliveryType) {
+    public PageResult<MerchantVO> userPage(Integer current, Integer size, Long categoryId, String keyword,
+                                          Integer deliveryType, BigDecimal lng, BigDecimal lat) {
         Page<Merchant> page = new Page<>(current == null ? 1 : current, size == null ? 10 : size);
         LambdaQueryWrapper<Merchant> wrapper = new LambdaQueryWrapper<Merchant>()
                 .eq(Merchant::getStatus, 1)
@@ -103,13 +118,73 @@ public class MerchantServiceImpl implements MerchantService {
                 .eq(categoryId != null, Merchant::getCategoryId, categoryId)
                 .like(keyword != null && !keyword.isEmpty(), Merchant::getName, keyword)
                 .eq(deliveryType != null && deliveryType == 1, Merchant::getSupportDelivery, 1)
-                .eq(deliveryType != null && deliveryType == 2, Merchant::getSupportPickup, 1)
-                .orderByDesc(Merchant::getRating);
-        Page<Merchant> result = merchantMapper.selectPage(page, wrapper);
-        List<MerchantVO> records = result.getRecords().stream()
-                .map(this::toVO)
+                .eq(deliveryType != null && deliveryType == 2, Merchant::getSupportPickup, 1);
+
+        // 如果有用户坐标，查询所有商家后按距离排序（内存计算，适合小数据量）
+        // 大数据量场景建议使用MySQL ST_Distance_Sphere或GeoHash
+        List<Merchant> merchantList;
+        long total;
+        if (lng != null && lat != null) {
+            // 不分页查询所有符合条件的商家（用于距离排序），实际生产环境应使用地理空间查询
+            wrapper.orderByDesc(Merchant::getRating);
+            List<Merchant> all = merchantMapper.selectList(wrapper);
+            total = all.size();
+            // 计算距离并按距离排序
+            List<Merchant> sorted = all.stream()
+                    .sorted(Comparator.comparingInt(m -> {
+                        if (m.getLongitude() == null || m.getLatitude() == null) return Integer.MAX_VALUE;
+                        return calculateDistance(lng.doubleValue(), lat.doubleValue(),
+                                m.getLongitude().doubleValue(), m.getLatitude().doubleValue());
+                    }))
+                    .collect(Collectors.toList());
+            // 手动分页
+            int fromIndex = (int) ((current == null ? 1 : current) - 1) * (size == null ? 10 : size);
+            int toIndex = Math.min(fromIndex + (size == null ? 10 : size), sorted.size());
+            if (fromIndex >= sorted.size()) {
+                merchantList = Collections.emptyList();
+            } else {
+                merchantList = sorted.subList(fromIndex, toIndex);
+            }
+        } else {
+            wrapper.orderByDesc(Merchant::getRating);
+            Page<Merchant> result = merchantMapper.selectPage(page, wrapper);
+            merchantList = result.getRecords();
+            total = result.getTotal();
+        }
+
+        // 转换为VO并设置距离
+        double userLng = lng != null ? lng.doubleValue() : 0;
+        double userLat = lat != null ? lat.doubleValue() : 0;
+        List<MerchantVO> records = merchantList.stream()
+                .map(m -> {
+                    MerchantVO vo = toVO(m);
+                    if (lng != null && lat != null && m.getLongitude() != null && m.getLatitude() != null) {
+                        vo.setDistance(calculateDistance(userLng, userLat,
+                                m.getLongitude().doubleValue(), m.getLatitude().doubleValue()));
+                    }
+                    return vo;
+                })
                 .collect(Collectors.toList());
-        return PageResult.of(records, result.getTotal(), result.getCurrent(), result.getSize());
+
+        int cur = current == null ? 1 : current;
+        int sz = size == null ? 10 : size;
+        return PageResult.of(records, (long) total, (long) cur, (long) sz);
+    }
+
+    /**
+     * Haversine公式计算两点间直线距离（米）
+     */
+    private int calculateDistance(double lng1, double lat1, double lng2, double lat2) {
+        double radLat1 = Math.toRadians(lat1);
+        double radLat2 = Math.toRadians(lat2);
+        double deltaLat = Math.toRadians(lat2 - lat1);
+        double deltaLng = Math.toRadians(lng2 - lng1);
+        double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2)
+                + Math.cos(radLat1) * Math.cos(radLat2)
+                * Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        double distanceKm = EARTH_RADIUS_KM * c;
+        return (int) Math.round(distanceKm * 1000);
     }
 
     @Override
@@ -143,7 +218,7 @@ public class MerchantServiceImpl implements MerchantService {
                 dv.setPlatformCategoryId(d.getPlatformCategoryId());
                 dv.setName(d.getName());
                 dv.setDescription(d.getDescription());
-                dv.setImage(d.getImage());
+                dv.setImage(resolveImageUrl(d.getImage()));
                 dv.setPrice(d.getPrice());
                 dv.setOriginalPrice(d.getOriginalPrice());
                 dv.setStock(d.getStock());
@@ -178,9 +253,9 @@ public class MerchantServiceImpl implements MerchantService {
 
     @Override
     public void updateSettings(String name, String logo, String contactPerson, String phone, String description, String notice,
-                               String openTime, Integer isOpen, BigDecimal minOrderAmount,
+                               String openTime, String address, Integer isOpen, BigDecimal minOrderAmount,
                                BigDecimal deliveryFee, BigDecimal packingFee, Integer deliveryRadius,
-                               Integer supportDelivery, Integer supportPickup) {
+                               Integer supportDelivery, Integer supportPickup, BigDecimal longitude, BigDecimal latitude) {
         Long merchantId = UserContext.getUserId();
         Merchant m = merchantMapper.selectByIdRaw(merchantId);
         if (m == null) {
@@ -188,20 +263,23 @@ public class MerchantServiceImpl implements MerchantService {
         }
         Merchant update = new Merchant();
         update.setId(merchantId);
-        update.setName(name);
-        update.setLogo(logo);
-        update.setContactName(contactPerson);
-        update.setContactPhone(phone);
-        update.setDescription(description);
-        update.setNotice(notice);
-        update.setOpenTime(openTime);
-        update.setIsOpen(isOpen);
-        update.setMinOrderAmount(minOrderAmount);
-        update.setDeliveryFee(deliveryFee);
-        update.setPackingFee(packingFee);
-        update.setDeliveryRadius(deliveryRadius);
-        update.setSupportDelivery(supportDelivery);
-        update.setSupportPickup(supportPickup);
+        if (name != null) update.setName(name);
+        if (logo != null) update.setLogo(logo);
+        if (contactPerson != null) update.setContactName(contactPerson);
+        if (phone != null) update.setContactPhone(phone);
+        if (description != null) update.setDescription(description);
+        if (notice != null) update.setNotice(notice);
+        if (openTime != null) update.setOpenTime(openTime);
+        if (address != null) update.setAddress(address);
+        if (isOpen != null) update.setIsOpen(isOpen);
+        if (minOrderAmount != null) update.setMinOrderAmount(minOrderAmount);
+        if (deliveryFee != null) update.setDeliveryFee(deliveryFee);
+        if (packingFee != null) update.setPackingFee(packingFee);
+        if (deliveryRadius != null) update.setDeliveryRadius(deliveryRadius);
+        if (supportDelivery != null) update.setSupportDelivery(supportDelivery);
+        if (supportPickup != null) update.setSupportPickup(supportPickup);
+        if (longitude != null) update.setLongitude(longitude);
+        if (latitude != null) update.setLatitude(latitude);
         merchantMapper.updateById(update);
     }
 
@@ -304,7 +382,7 @@ public class MerchantServiceImpl implements MerchantService {
         MerchantVO vo = new MerchantVO();
         vo.setId(m.getId());
         vo.setName(m.getName());
-        vo.setLogo(m.getLogo());
+        vo.setLogo(resolveImageUrl(m.getLogo()));
         vo.setCategoryId(m.getCategoryId());
         // 填充分类名称
         if (m.getCategoryId() != null) {
@@ -339,5 +417,12 @@ public class MerchantServiceImpl implements MerchantService {
         vo.setCreateTime(m.getCreatedAt());
         vo.setQualification(m.getQualification());
         return vo;
+    }
+
+    private String resolveImageUrl(String key) {
+        if (key == null || key.trim().isEmpty()) return null;
+        String trimmed = key.trim();
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+        return storageService.getAccessUrl(trimmed);
     }
 }

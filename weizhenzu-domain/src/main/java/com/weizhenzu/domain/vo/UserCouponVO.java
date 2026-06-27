@@ -7,6 +7,7 @@ import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 用户优惠券 VO
@@ -61,4 +62,13 @@ public class UserCouponVO implements Serializable {
     @Schema(description = "领取时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
+
+    @Schema(description = "适用范围：1全场通用 2指定商家 3指定类目")
+    private Integer scope;
+
+    @Schema(description = "适用范围描述")
+    private String scopeDesc;
+
+    @Schema(description = "适用商家/类目ID列表（字符串形式，避免前端JS精度丢失）")
+    private List<String> scopeIds;
 }

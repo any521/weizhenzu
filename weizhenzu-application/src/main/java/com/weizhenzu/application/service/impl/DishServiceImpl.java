@@ -13,6 +13,7 @@ import com.weizhenzu.domain.dto.DishDTO;
 import com.weizhenzu.domain.entity.Dish;
 import com.weizhenzu.domain.entity.DishCategory;
 import com.weizhenzu.domain.entity.DishSpec;
+import com.weizhenzu.domain.entity.Merchant;
 import com.weizhenzu.domain.entity.MerchantCategory;
 import com.weizhenzu.domain.vo.DishSpecVO;
 import com.weizhenzu.domain.vo.DishVO;
@@ -20,6 +21,8 @@ import com.weizhenzu.infrastructure.persistence.mapper.DishCategoryMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.DishMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.DishSpecMapper;
 import com.weizhenzu.infrastructure.persistence.mapper.MerchantCategoryMapper;
+import com.weizhenzu.infrastructure.persistence.mapper.MerchantMapper;
+import com.weizhenzu.infrastructure.thirdparty.storage.StorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -46,7 +49,9 @@ public class DishServiceImpl implements DishService {
     private final DishSpecMapper dishSpecMapper;
     private final DishCategoryMapper dishCategoryMapper;
     private final MerchantCategoryMapper merchantCategoryMapper;
+    private final MerchantMapper merchantMapper;
     private final ObjectMapper objectMapper;
+    private final StorageService storageService;
 
     @Override
     public DishVO detail(Long id) {
@@ -56,6 +61,7 @@ public class DishServiceImpl implements DishService {
         }
         DishVO vo = toVO(dish, true);
         fillCategoryNames(vo, dish);
+        fillDishMerchantInfo(vo, dish);
         return vo;
     }
 
@@ -149,6 +155,96 @@ public class DishServiceImpl implements DishService {
         return PageResult.of(records, result.getTotal(), result.getCurrent(), result.getSize());
     }
 
+    @Override
+    public PageResult<DishVO> userPage(Integer current, Integer size, Long platformCategoryId, String keyword) {
+        Page<Dish> page = new Page<>(current == null ? 1 : current, size == null ? 10 : size);
+        LambdaQueryWrapper<Dish> wrapper = new LambdaQueryWrapper<Dish>()
+                .eq(Dish::getStatus, 1)
+                .eq(platformCategoryId != null, Dish::getPlatformCategoryId, platformCategoryId)
+                .and(keyword != null && !keyword.isEmpty(), w -> w
+                        .like(Dish::getName, keyword)
+                        .or().like(Dish::getDescription, keyword))
+                .orderByDesc(Dish::getMonthSales)
+                .orderByDesc(Dish::getCreatedAt);
+        Page<Dish> result = dishMapper.selectPage(page, wrapper);
+        List<DishVO> records = result.getRecords().stream()
+                .map(d -> {
+                    DishVO vo = toVO(d, false);
+                    fillDishMerchantInfo(vo, d);
+                    fillCategoryNames(vo, d);
+                    return vo;
+                })
+                .collect(Collectors.toList());
+        return PageResult.of(records, result.getTotal(), result.getCurrent(), result.getSize());
+    }
+
+    @Override
+    public List<DishVO> featuredDishes(Integer limit, Integer diningType) {
+        int lim = (limit == null || limit <= 0) ? 5 : limit;
+        // 为了按商家配送类型筛选，查询更多菜品（最多取 lim*10），过滤后再截取
+        int fetchLimit = (diningType != null) ? Math.max(lim * 10, 50) : lim;
+        LambdaQueryWrapper<Dish> wrapper = new LambdaQueryWrapper<Dish>()
+                .eq(Dish::getStatus, 1)
+                .orderByDesc(Dish::getCreatedAt)
+                .last("LIMIT " + fetchLimit);
+        List<Dish> dishes = dishMapper.selectList(wrapper);
+
+        // 如果指定了 diningType，按商家的 supportDelivery/supportPickup 筛选
+        if (diningType != null) {
+            // 收集所有商家ID
+            List<Long> merchantIds = dishes.stream()
+                    .map(Dish::getMerchantId)
+                    .filter(id -> id != null)
+                    .distinct()
+                    .collect(Collectors.toList());
+            if (!merchantIds.isEmpty()) {
+                // 批量查询商家
+                List<Merchant> merchants = merchantMapper.selectBatchIds(merchantIds);
+                // 构建 商家ID -> 是否支持当前配送类型 的映射
+                Map<Long, Boolean> merchantSupportMap = merchants.stream()
+                        .collect(Collectors.toMap(
+                                Merchant::getId,
+                                m -> {
+                                    if (diningType == 2) {
+                                        return Integer.valueOf(1).equals(m.getSupportDelivery());
+                                    } else if (diningType == 3) {
+                                        return Integer.valueOf(1).equals(m.getSupportPickup());
+                                    }
+                                    return true;
+                                },
+                                (a, b) -> a
+                        ));
+                // 过滤菜品：只保留所属商家支持当前配送类型的菜品
+                dishes = dishes.stream()
+                        .filter(d -> d.getMerchantId() == null
+                                || merchantSupportMap.getOrDefault(d.getMerchantId(), false))
+                        .limit(lim)
+                        .collect(Collectors.toList());
+            }
+        }
+
+        return dishes.stream()
+                .map(d -> {
+                    DishVO vo = toVO(d, false);
+                    fillDishMerchantInfo(vo, d);
+                    return vo;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 填充菜品所属商家信息
+     */
+    private void fillDishMerchantInfo(DishVO vo, Dish dish) {
+        if (dish.getMerchantId() != null) {
+            Merchant m = merchantMapper.selectById(dish.getMerchantId());
+            if (m != null) {
+                vo.setMerchantName(m.getName());
+                vo.setMerchantLogo(resolveImageUrl(m.getLogo()));
+            }
+        }
+    }
+
     /**
      * 填充菜品的分类名称（商家分类和平台分类）
      */
@@ -206,7 +302,7 @@ public class DishServiceImpl implements DishService {
         vo.setPlatformCategoryId(dish.getPlatformCategoryId());
         vo.setName(dish.getName());
         vo.setDescription(dish.getDescription());
-        vo.setImage(dish.getImage());
+        vo.setImage(resolveImageUrl(dish.getImage()));
         vo.setPrice(dish.getPrice());
         vo.setOriginalPrice(dish.getOriginalPrice());
         vo.setStock(dish.getStock());
@@ -219,7 +315,8 @@ public class DishServiceImpl implements DishService {
         vo.setCreateTime(dish.getCreatedAt());
         // 解析 tags/images JSON
         vo.setTags(parseJsonList(dish.getTags()));
-        vo.setImages(parseJsonList(dish.getImages()));
+        List<String> images = parseJsonList(dish.getImages());
+        vo.setImages(images.stream().map(this::resolveImageUrl).collect(Collectors.toList()));
         if (withSpecs) {
             List<DishSpec> specs = dishSpecMapper.selectList(
                     new LambdaQueryWrapper<DishSpec>()
@@ -262,5 +359,12 @@ public class DishServiceImpl implements DishService {
             }
             return List.of(json);
         }
+    }
+
+    private String resolveImageUrl(String key) {
+        if (key == null || key.trim().isEmpty()) return null;
+        String trimmed = key.trim();
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+        return storageService.getAccessUrl(trimmed);
     }
 }

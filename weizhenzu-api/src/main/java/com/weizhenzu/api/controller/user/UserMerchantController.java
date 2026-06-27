@@ -9,10 +9,12 @@ import com.weizhenzu.domain.vo.MerchantCategoryVO;
 import com.weizhenzu.domain.vo.MerchantVO;
 import com.weizhenzu.domain.vo.ReviewVO;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -37,8 +39,10 @@ public class UserMerchantController {
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) Integer deliveryType) {
-        return Result.ok(merchantService.userPage(current, size, categoryId, keyword, deliveryType));
+            @RequestParam(required = false) Integer deliveryType,
+            @Parameter(description = "用户经度") @RequestParam(required = false) BigDecimal lng,
+            @Parameter(description = "用户纬度") @RequestParam(required = false) BigDecimal lat) {
+        return Result.ok(merchantService.userPage(current, size, categoryId, keyword, deliveryType, lng, lat));
     }
 
     @Operation(summary = "商家分类列表")
@@ -49,8 +53,11 @@ public class UserMerchantController {
 
     @Operation(summary = "商家详情")
     @GetMapping("/{id}")
-    public Result<MerchantVO> detail(@PathVariable Long id) {
-        return Result.ok(merchantService.detail(id));
+    public Result<MerchantVO> detail(
+            @PathVariable Long id,
+            @Parameter(description = "用户经度") @RequestParam(required = false) BigDecimal lng,
+            @Parameter(description = "用户纬度") @RequestParam(required = false) BigDecimal lat) {
+        return Result.ok(merchantService.detail(id, lng, lat));
     }
 
     @Operation(summary = "商家菜单")

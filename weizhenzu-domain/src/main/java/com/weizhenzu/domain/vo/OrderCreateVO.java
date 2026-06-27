@@ -32,8 +32,23 @@ public class OrderCreateVO implements Serializable {
     @Schema(description = "订单状态描述")
     private String statusDesc;
 
+    @Schema(description = "商品总金额")
+    private BigDecimal totalAmount;
+
+    @Schema(description = "打包费")
+    private BigDecimal packingFee;
+
+    @Schema(description = "配送费")
+    private BigDecimal deliveryFee;
+
+    @Schema(description = "优惠金额")
+    private BigDecimal couponAmount;
+
     @Schema(description = "实付金额")
     private BigDecimal payAmount;
+
+    @Schema(description = "用餐类型：1=堂食，2=外卖，3=自取")
+    private Integer diningType;
 
     @Schema(description = "支付过期时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

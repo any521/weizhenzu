@@ -41,8 +41,17 @@ public class ReviewVO implements Serializable {
     @Schema(description = "商家ID")
     private Long merchantId;
 
+    @Schema(description = "商家名称")
+    private String merchantName;
+
     @Schema(description = "骑手ID")
     private Long deliveryManId;
+
+    @Schema(description = "骑手名称")
+    private String deliveryManName;
+
+    @Schema(description = "评价菜品名称列表")
+    private List<String> dishNames;
 
     @Schema(description = "总评分")
     private Integer rating;
@@ -71,9 +80,15 @@ public class ReviewVO implements Serializable {
     @Schema(description = "商家回复")
     private String merchantReply;
 
+    @Schema(description = "商家回复（别名，兼容前端）")
+    private String reply;
+
     @Schema(description = "商家回复时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime merchantReplyTime;
+
+    @Schema(description = "评价状态：0隐藏 1公开")
+    private Integer status;
 
     @Schema(description = "创建时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

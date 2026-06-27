@@ -26,6 +26,12 @@ public class DishVO implements Serializable {
     @Schema(description = "商家ID")
     private Long merchantId;
 
+    @Schema(description = "商家名称")
+    private String merchantName;
+
+    @Schema(description = "商家Logo")
+    private String merchantLogo;
+
     @Schema(description = "商家菜品分类ID（商家自定义分类）")
     private Long categoryId;
 

@@ -68,7 +68,13 @@ public class Order implements Serializable {
 
     private LocalDateTime merchantAcceptTime;
 
+    private LocalDateTime merchantReadyTime;
+
     private LocalDateTime riderTakeTime;
+
+    private LocalDateTime riderArriveTime;
+
+    private LocalDateTime riderPickupTime;
 
     private LocalDateTime deliverTime;
 

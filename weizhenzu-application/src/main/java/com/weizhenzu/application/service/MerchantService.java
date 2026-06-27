@@ -24,8 +24,11 @@ public interface MerchantService {
 
     /**
      * 商家详情
+     * @param id 商家ID
+     * @param lng 用户经度（可选，用于计算距离）
+     * @param lat 用户纬度（可选，用于计算距离）
      */
-    MerchantVO detail(Long id);
+    MerchantVO detail(Long id, BigDecimal lng, BigDecimal lat);
 
     /**
      * 当前商家信息
@@ -40,8 +43,11 @@ public interface MerchantService {
      * @param categoryId   分类ID
      * @param keyword      搜索关键词
      * @param deliveryType 配送类型：1=外卖，2=自取，null=全部
+     * @param lng          用户经度（可选，用于计算距离和排序）
+     * @param lat          用户纬度（可选，用于计算距离和排序）
      */
-    PageResult<MerchantVO> userPage(Integer current, Integer size, Long categoryId, String keyword, Integer deliveryType);
+    PageResult<MerchantVO> userPage(Integer current, Integer size, Long categoryId, String keyword, Integer deliveryType,
+                                    BigDecimal lng, BigDecimal lat);
 
     /**
      * 商家菜单（C端）
@@ -70,11 +76,13 @@ public interface MerchantService {
      * @param deliveryRadius  配送半径
      * @param supportDelivery 是否支持外卖
      * @param supportPickup   是否支持自取
+     * @param longitude       经度
+     * @param latitude        纬度
      */
     void updateSettings(String name, String logo, String contactPerson, String phone, String description, String notice,
-                        String openTime, Integer isOpen, BigDecimal minOrderAmount,
+                        String openTime, String address, Integer isOpen, BigDecimal minOrderAmount,
                         BigDecimal deliveryFee, BigDecimal packingFee, Integer deliveryRadius,
-                        Integer supportDelivery, Integer supportPickup);
+                        Integer supportDelivery, Integer supportPickup, BigDecimal longitude, BigDecimal latitude);
 
     /**
      * 商家财务统计

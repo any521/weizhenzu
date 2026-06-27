@@ -45,14 +45,83 @@ public class PublicController {
         return alipayNotify(request);
     }
 
-    @Operation(summary = "微信支付回调")
+    @Operation(summary = "微信支付回调（Mock模式：处理模拟微信支付通知）")
     @PostMapping("/payment/wechat/callback")
     public Map<String, Object> wechatCallback(@RequestBody String body) {
         log.info("[微信回调] body={}", body);
         Map<String, Object> result = new HashMap<>();
+        try {
+            // 解析回调参数（兼容XML和JSON格式）
+            String paymentNo = null;
+            String thirdPartyNo = null;
+            if (body != null && body.contains("<xml>")) {
+                // XML格式（真实微信回调格式）
+                paymentNo = extractXmlTag(body, "out_trade_no");
+                thirdPartyNo = extractXmlTag(body, "transaction_id");
+            } else if (body != null && body.startsWith("{")) {
+                // JSON格式（Mock测试用）
+                Map<String, String> params = parseSimpleJson(body);
+                paymentNo = params.get("out_trade_no");
+                thirdPartyNo = params.get("transaction_id");
+            }
+            if (paymentNo != null) {
+                if (thirdPartyNo == null) {
+                    thirdPartyNo = "MOCK_WX_" + paymentNo;
+                }
+                paymentService.handleCallback(paymentNo, thirdPartyNo, true);
+                log.info("[微信回调] 支付成功处理: paymentNo={}", paymentNo);
+            }
+        } catch (Exception e) {
+            log.error("[微信回调] 处理异常", e);
+        }
         result.put("code", "SUCCESS");
         result.put("message", "成功");
         return result;
+    }
+
+    /**
+     * 简单提取XML标签值（用于微信回调解析，避免引入额外依赖）
+     */
+    private String extractXmlTag(String xml, String tagName) {
+        if (xml == null) return null;
+        String openTag = "<" + tagName + ">";
+        String closeTag = "</" + tagName + ">";
+        // 兼容CDATA格式: <tag><![CDATA[value]]></tag>
+        String cdataOpen = "<" + tagName + "><![CDATA[";
+        int start = xml.indexOf(cdataOpen);
+        if (start >= 0) {
+            start += cdataOpen.length();
+            int end = xml.indexOf("]]></" + tagName + ">", start);
+            if (end > start) return xml.substring(start, end);
+        }
+        start = xml.indexOf(openTag);
+        if (start >= 0) {
+            start += openTag.length();
+            int end = xml.indexOf(closeTag, start);
+            if (end > start) return xml.substring(start, end);
+        }
+        return null;
+    }
+
+    /**
+     * 简单解析JSON key-value（用于Mock回调，避免引入额外依赖）
+     */
+    private Map<String, String> parseSimpleJson(String json) {
+        Map<String, String> map = new HashMap<>();
+        if (json == null) return map;
+        // 去除大括号
+        String content = json.trim();
+        if (content.startsWith("{")) content = content.substring(1);
+        if (content.endsWith("}")) content = content.substring(0, content.length() - 1);
+        for (String pair : content.split(",")) {
+            String[] kv = pair.split(":", 2);
+            if (kv.length == 2) {
+                String key = kv[0].trim().replace("\"", "");
+                String value = kv[1].trim().replace("\"", "");
+                map.put(key, value);
+            }
+        }
+        return map;
     }
 
     @Operation(summary = "逆地理编码")

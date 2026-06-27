@@ -22,4 +22,11 @@ public interface DishSpecMapper extends BaseMapper<DishSpec> {
             "WHERE id = #{specId} AND deleted = 0 AND status = 1 " +
             "AND (stock = -1 OR stock >= #{quantity})")
     int deductStock(@Param("specId") Long specId, @Param("quantity") Integer quantity);
+
+    /**
+     * 回退规格库存（取消订单/退款时使用，仅对有限库存生效，stock=-1 表示无限库存无需回退）
+     */
+    @Update("UPDATE t_dish_spec SET stock = stock + #{quantity}, updated_at = NOW() " +
+            "WHERE id = #{specId} AND deleted = 0 AND stock <> -1")
+    int rollbackStock(@Param("specId") Long specId, @Param("quantity") Integer quantity);
 }

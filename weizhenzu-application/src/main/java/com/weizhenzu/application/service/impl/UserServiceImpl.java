@@ -9,6 +9,7 @@ import com.weizhenzu.domain.dto.PasswordUpdateDTO;
 import com.weizhenzu.domain.entity.User;
 import com.weizhenzu.domain.vo.UserVO;
 import com.weizhenzu.infrastructure.persistence.mapper.UserMapper;
+import com.weizhenzu.infrastructure.thirdparty.storage.StorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final StorageService storageService;
 
     @Override
     public UserVO currentUser() {
@@ -45,7 +47,7 @@ public class UserServiceImpl implements UserService {
         vo.setEmail(maskEmail(user.getEmail()));
         vo.setUsername(user.getUsername());
         vo.setNickname(user.getNickname());
-        vo.setAvatar(user.getAvatar());
+        vo.setAvatar(resolveImageUrl(user.getAvatar()));
         vo.setGender(user.getGender());
         vo.setBirthday(user.getBirthday());
         vo.setLevel(user.getLevel());
@@ -53,6 +55,20 @@ public class UserServiceImpl implements UserService {
         vo.setBalance(user.getBalance());
         vo.setCreatedAt(user.getCreatedAt());
         return vo;
+    }
+
+    /**
+     * 解析图片URL：objectKey转为完整可访问URL
+     */
+    private String resolveImageUrl(String urlOrKey) {
+        if (urlOrKey == null || urlOrKey.isBlank()) {
+            return null;
+        }
+        String trimmed = urlOrKey.trim();
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("data:")) {
+            return trimmed;
+        }
+        return storageService.getAccessUrl(trimmed);
     }
 
     /**
@@ -96,19 +112,6 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void unbindPhone() {
-        Long userId = UserContext.getUserId();
-        User user = userMapper.selectById(userId);
-        if (user == null) {
-            throw new BizException(ResultCode.USER_NOT_FOUND);
-        }
-        String decryptedPhone = PhoneUtils.decrypt(user.getPhone());
-        if (decryptedPhone == null || decryptedPhone.isBlank()) {
-            throw new BizException(ResultCode.PARAM_ERROR, "当前账号未绑定手机号");
-        }
-        User update = new User();
-        update.setId(userId);
-        update.setPhone(null);
-        update.setPhoneHash(null);
-        userMapper.updateById(update);
+
     }
 }

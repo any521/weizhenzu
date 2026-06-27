@@ -32,6 +32,13 @@ public interface OrderMapper extends BaseMapper<Order> {
     int updatePayStatus(@Param("orderId") Long orderId, @Param("payStatus") Integer payStatus);
 
     /**
+     * 更新支付方式（支付回调成功时回写，确保 order.payType 与最终成功的 payment 一致）
+     */
+    @Update("UPDATE t_order SET pay_type = #{payType}, " +
+            "version = version + 1, updated_at = NOW() WHERE id = #{orderId} AND deleted = 0")
+    int updatePayType(@Param("orderId") Long orderId, @Param("payType") Integer payType);
+
+    /**
      * 更新取消信息
      */
     @Update("UPDATE t_order SET cancel_time = NOW(), cancel_reason = #{reason}, " +
@@ -45,4 +52,20 @@ public interface OrderMapper extends BaseMapper<Order> {
             "version = version + 1, updated_at = NOW() " +
             "WHERE status = 0 AND deleted = 0 AND created_at < DATE_SUB(NOW(), INTERVAL #{minutes} MINUTE)")
     int cancelTimeoutOrders(@Param("minutes") int minutes);
+
+    /**
+     * 批量取消商家超时未接单订单（PENDING_ACCEPT=1，创建时间超过指定分钟数）
+     */
+    @Update("UPDATE t_order SET status = 9, cancel_time = NOW(), cancel_reason = '商家超时未接单自动取消', " +
+            "version = version + 1, updated_at = NOW() " +
+            "WHERE status = 1 AND deleted = 0 AND created_at < DATE_SUB(NOW(), INTERVAL #{minutes} MINUTE)")
+    int cancelMerchantTimeoutOrders(@Param("minutes") int minutes);
+
+    /**
+     * 批量自动确认收货（DELIVERED=6，送达时间超过指定小时数）
+     */
+    @Update("UPDATE t_order SET status = 7, complete_time = NOW(), " +
+            "version = version + 1, updated_at = NOW() " +
+            "WHERE status = 6 AND deleted = 0 AND deliver_time < DATE_SUB(NOW(), INTERVAL #{hours} HOUR)")
+    int autoConfirmReceived(@Param("hours") int hours);
 }

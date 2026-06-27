@@ -104,9 +104,21 @@ public class OrderVO implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime merchantAcceptTime;
 
+    @Schema(description = "商家出餐时间")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime merchantReadyTime;
+
     @Schema(description = "骑手接单时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime riderTakeTime;
+
+    @Schema(description = "骑手到店时间")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime riderArriveTime;
+
+    @Schema(description = "骑手取餐时间")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime riderPickupTime;
 
     @Schema(description = "送达时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -151,10 +163,25 @@ public class OrderVO implements Serializable {
     @Schema(description = "用户纬度")
     private BigDecimal userLat;
 
+    @Schema(description = "骑手名称")
+    private String riderName;
+
+    @Schema(description = "骑手电话")
+    private String riderPhone;
+
+    @Schema(description = "客户名称（用户名/昵称）")
+    private String customerName;
+
+    @Schema(description = "客户收货地址")
+    private String customerAddress;
+
+    @Schema(description = "客户手机号（脱敏）")
+    private String customerPhone;
+
     @Schema(description = "是否已评价")
     private Integer isRated;
 
-    @Schema(description = "用餐类型：1=堂食，2=外卖")
+    @Schema(description = "用餐类型：1=堂食，2=外卖，3=自取")
     private Integer diningType;
 
     @Schema(description = "创建时间")

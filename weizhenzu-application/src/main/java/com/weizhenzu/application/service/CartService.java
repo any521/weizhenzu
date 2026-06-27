@@ -36,4 +36,9 @@ public interface CartService {
      * 清空购物车
      */
     void clear();
+
+    /**
+     * 清空指定商家的购物车（下单成功后调用）
+     */
+    void clearByMerchant(Long userId, Long merchantId);
 }
